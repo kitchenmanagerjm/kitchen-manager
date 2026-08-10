@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Manager</title>
+<link rel="stylesheet" href="css/styles.css">
+<script>
+  // aplica el tema guardado antes de pintar la página, para evitar el parpadeo del tema equivocado
+  (function () {
+    try {
+      var t = localStorage.getItem('costeo_tema_v1');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+
+<div id="fondoCapa" aria-hidden="true"></div>
+
+<!-- ================= LOGIN ================= -->
+<!-- Visible por defecto (sin "hidden") a propósito: mientras auth.js no confirme una sesión
+     válida, tapa toda la app -- así nunca hay un parpadeo del contenido antes de saber si hay
+     sesión o no ("fail closed", no "fail open"). -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <span class="auth-logo-icono" id="authLogoIcono">🍽️</span>
+      <h1 id="authLogoNombre">Kitchen Manager</h1>
+    </div>
+
+    <form id="formLogin">
+      <label class="auth-label" for="loginEmail">Correo o nombre de usuario</label>
+      <input type="text" id="loginEmail" autocomplete="username" required>
+      <label class="auth-label" for="loginPassword">Contraseña</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <p class="auth-error" id="loginError" hidden></p>
+      <button type="submit" class="btn btn-primary auth-btn" id="btnLogin">Ingresar</button>
+      <button type="button" class="auth-link" id="btnOlvideContrasena">¿Olvidaste tu contraseña?</button>
+    </form>
+
+    <!-- Paso 1 de recuperación: pedir el email para enviar el código de 6 dígitos. -->
+    <form id="formSolicitarCodigo" hidden>
+      <label class="auth-label" for="recuperarEmail">Email</label>
+      <input type="email" id="recuperarEmail" autocomplete="email" required>
+      <p class="auth-info">Te enviaremos un código de 6 dígitos a ese correo para restablecer tu contraseña.</p>
+      <p class="auth-error" id="recuperarSolicitarError" hidden></p>
+      <button type="submit" class="btn btn-primary auth-btn" id="btnEnviarCodigo">Enviar código</button>
+      <button type="button" class="auth-link" id="btnVolverLoginDesdeSolicitar">← Volver al inicio de sesión</button>
+    </form>
+
+    <!-- Paso 2: el código ya se envió (o no -- nunca se revela cuál) -- acá se pega el código y
+         se define la nueva contraseña. -->
+    <form id="formRestablecerConCodigo" hidden>
+      <p class="auth-info" id="recuperarConfirmacionEnvio">Si el correo existe, se envió un código.</p>
+      <label class="auth-label" for="recuperarCodigo">Código de 6 dígitos</label>
+      <input type="text" id="recuperarCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+      <label class="auth-label" for="recuperarNuevaPassword">Nueva contraseña</label>
+      <input type="password" id="recuperarNuevaPassword" autocomplete="new-password" required>
+      <label class="auth-label" for="recuperarConfirmarPassword">Confirmar nueva contraseña</label>
+      <input type="password" id="recuperarConfirmarPassword" autocomplete="new-password" required>
+      <p class="auth-error" id="recuperarCodigoError" hidden></p>
+      <button type="submit" class="btn btn-primary auth-btn" id="btnRestablecerPassword">Restablecer contraseña</button>
+      <p class="auth-info">¿No recibiste el código? Contacta al administrador del sistema.</p>
+      <button type="button" class="auth-link" id="btnVolverLoginDesdeCodigo">← Volver al inicio de sesión</button>
+    </form>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="topbar-icon" id="topbarIcono">🍽️</span>
+    <div>
+      <h1 id="topbarNombre">Kitchen Manager</h1>
+      <p id="topbarSubtitulo">Insumos, recetas y precio de venta</p>
+    </div>
+    <button class="btn btn-ghost" id="btnConfiguracion" title="Configuración">⚙</button>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btnAbrirDatos" title="Exportar, importar, Excel, CSV">
+        <span class="icon">📁</span> Data
+      </button>
+      <a class="btn btn-ghost" href="docs/Guia_de_uso_Costeo_de_Platos.pdf" target="_blank" rel="noopener" title="Abrir la guía de uso en PDF">📖 Guía de uso</a>
+      <button class="btn btn-ghost" id="btnAuditoria" title="Historial de actividad">📋 Actividad</button>
+      <div class="cuenta-icono-wrap">
+        <button class="btn-avatar" id="btnCuenta" title="Mi cuenta">
+          <span class="avatar-icono" id="avatarIcono">👤</span>
+        </button>
+        <span class="avatar-etiqueta" id="avatarEtiqueta">Usuario</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn" data-view="calendario">📅 Calendario</button>
+  <button class="tab-btn" data-view="insumos">📦 Insumos</button>
+  <button class="tab-btn active" data-view="recetas">📖 Recetas</button>
+  <button class="tab-btn" data-view="pedidos">🧾 Pedidos</button>
+  <button class="tab-btn" data-view="clientes">👤 Clientes</button>
+  <button class="tab-btn" data-view="finanzas">💰 Finanzas</button>
+  <button class="tab-btn" data-view="compras">🛒 Compras<span class="badge-carrito" id="badgeCarritoCompras" hidden>0</span></button>
+</nav>
+
+<main>
+
+  <!-- ================= CALENDARIO ================= -->
+  <section id="view-calendario" class="view">
+    <div class="view-toolbar calendario-toolbar">
+      <div class="calendario-nav">
+        <button class="btn btn-ghost btn-sm" id="btnCalendarioAnterior">← Anterior</button>
+        <button class="btn btn-ghost btn-sm" id="btnCalendarioHoy">Hoy</button>
+        <button class="btn btn-ghost btn-sm" id="btnCalendarioSiguiente">Siguiente →</button>
+      </div>
+      <h2 class="calendario-titulo" id="calendarioTitulo">—</h2>
+      <button class="btn btn-ghost" id="btnAyudaCalendario" title="Ayuda">❓ Ayuda</button>
+    </div>
+    <p class="field-note">Insignia = Evento ese día (clic para abrir su detalle). Número en la esquina = cantidad de pedidos con entrega ese día (clic en el día para verlos en Pedidos).</p>
+    <div class="calendario-grid" id="calendarioGrid"></div>
+  </section>
+
+  <!-- ================= INSUMOS ================= -->
+  <section id="view-insumos" class="view">
+    <div class="view-toolbar">
+      <input type="search" id="buscarInsumo" placeholder="Buscar insumo por nombre o categoría...">
+      <button class="btn btn-ghost" id="btnCategoriasInsumo">⚙ Categorías</button>
+      <button class="btn btn-primary" id="btnNuevoInsumo">+ Nuevo insumo</button>
+      <button class="btn btn-ghost empuja-derecha" id="btnExportarInsumosPDF">🖨 Exportar PDF</button>
+      <button class="btn btn-ghost" id="btnPapeleraInsumos">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnAyudaInsumos" title="Ayuda">❓ Ayuda</button>
+    </div>
+
+    <div class="stats-row" id="statsInsumos"></div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="tablaInsumos">
+        <thead>
+          <tr>
+            <th class="th-sortable" data-sort="nombre">Nombre <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="categoria">Categoría <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="unidad">Unidad <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="precio">Precio <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="merma">Merma <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="actualizado">Actualizado <span class="sort-indicador"></span></th>
+            <th class="col-actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyInsumos"></tbody>
+      </table>
+      <p class="empty-state" id="emptyInsumos" hidden>No hay insumos registrados todavía. Crea el primero con "+ Nuevo insumo".</p>
+    </div>
+  </section>
+
+  <!-- ================= RECETAS ================= -->
+  <section id="view-recetas" class="view active">
+    <div class="view-toolbar">
+      <input type="search" id="buscarReceta" placeholder="Buscar receta por nombre o categoría...">
+      <button class="btn btn-ghost" id="btnCategoriasReceta">⚙ Categorías</button>
+      <button class="btn btn-primary" id="btnNuevaReceta">+ Nueva receta</button>
+      <button class="btn btn-ghost empuja-derecha" id="btnAyudaRecetas" title="Ayuda">❓ Ayuda</button>
+      <button class="btn btn-ghost" id="btnPapeleraRecetas">🗑 Papelera</button>
+    </div>
+
+    <div class="stats-row" id="statsRecetas"></div>
+
+    <div class="cards-grid" id="cardsRecetas"></div>
+    <p class="empty-state" id="emptyRecetas" hidden>No hay recetas creadas todavía. Crea la primera con "+ Nueva receta".</p>
+  </section>
+
+  <!-- ================= PEDIDOS ================= -->
+  <section id="view-pedidos" class="view">
+    <div class="view-toolbar">
+      <button class="btn btn-primary btn-lg" id="btnNuevoPedido">+ Nuevo pedido</button>
+      <button class="btn btn-ghost btn-lg" id="btnVentaMostrador">⚡ Venta de mostrador</button>
+      <button class="btn btn-ghost empuja-derecha" id="btnExportarPedidosPDF">🖨 Exportar PDF</button>
+      <button class="btn btn-ghost" id="btnPapeleraPedidos">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnAyudaPedidos" title="Ayuda">❓ Ayuda</button>
+    </div>
+
+    <div class="view-toolbar filtro-fecha-row">
+      <input type="search" id="buscarPedido" placeholder="Buscar pedido por cliente o teléfono...">
+      <label class="filtro-fecha-label">Entrega desde</label>
+      <input type="date" id="pedidosFiltroDesde">
+      <label class="filtro-fecha-label">hasta</label>
+      <input type="date" id="pedidosFiltroHasta">
+      <button class="btn btn-ghost btn-sm" id="btnLimpiarFiltroFecha">✕ Limpiar filtro</button>
+    </div>
+
+    <div class="stats-row" id="statsPedidos"></div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="tablaPedidos">
+        <thead>
+          <tr>
+            <th class="th-sortable" data-sort="numeroPedido">N.° <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="cliente">Cliente <span class="sort-indicador"></span></th>
+            <th>Teléfono</th>
+            <th>Platos</th>
+            <th class="th-sortable" data-sort="entrega">Entrega <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="jornada">Jornada/Evento <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="total">Total <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="pago">Pago <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="tipoPago">Tipo de pago <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="preparacion">Preparación <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="cancelado">Cancelado <span class="sort-indicador"></span></th>
+            <th>Notas</th>
+            <th class="col-actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyPedidos"></tbody>
+      </table>
+      <p class="empty-state" id="emptyPedidos" hidden>No hay pedidos registrados todavía. Crea el primero con "+ Nuevo pedido".</p>
+    </div>
+  </section>
+
+  <!-- ================= CLIENTES ================= -->
+  <section id="view-clientes" class="view">
+    <div class="view-toolbar">
+      <input type="search" id="buscarCliente" placeholder="Buscar cliente por nombre o teléfono...">
+      <button class="btn btn-primary" id="btnNuevoCliente">+ Nuevo cliente</button>
+      <button class="btn btn-ghost empuja-derecha" id="btnExportarClientesPDF">🖨 Exportar PDF</button>
+      <button class="btn btn-ghost" id="btnPapeleraClientes">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnAyudaClientes" title="Ayuda">❓ Ayuda</button>
+    </div>
+
+    <div class="stats-row" id="statsClientes"></div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="tablaClientes">
+        <thead>
+          <tr>
+            <th class="th-sortable" data-sort="nombre">Nombre <span class="sort-indicador"></span></th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th>Notas</th>
+            <th>Pedidos</th>
+            <th class="th-sortable" data-sort="totalPlatos">Platos pedidos <span class="sort-indicador"></span></th>
+            <th class="th-sortable" data-sort="totalAcumulado">Total acumulado <span class="sort-indicador"></span></th>
+            <th class="col-actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyClientes"></tbody>
+      </table>
+      <p class="empty-state" id="emptyClientes" hidden>No hay clientes registrados todavía. Crea el primero con "+ Nuevo cliente".</p>
+    </div>
+  </section>
+
+  <!-- ================= FINANZAS ================= -->
+  <section id="view-finanzas" class="view">
+    <nav class="subtabs" id="subtabsFinanzas">
+      <button class="subtab-btn active" data-subview="resumen">📊 Resumen</button>
+      <button class="subtab-btn" data-subview="jornadas">📅 Jornadas / Eventos</button>
+      <button class="subtab-btn" data-subview="gastos">🧾 Gastos</button>
+      <button class="subtab-btn" data-subview="capital">🏦 Capital</button>
+      <button class="subtab-btn" data-subview="rentabilidad">📈 Rentabilidad</button>
+    </nav>
+
+    <div id="subview-resumen" class="subview active">
+      <div class="view-toolbar">
+        <button class="btn btn-ghost empuja-derecha" id="btnAyudaFinanzasResumen" title="Ayuda">❓ Ayuda</button>
+      </div>
+      <div class="stats-row" id="statsFinanzas"></div>
+    </div>
+
+    <div id="subview-jornadas" class="subview">
+      <div class="view-toolbar">
+        <input type="search" id="buscarJornada" placeholder="Buscar jornada por nombre...">
+        <button class="btn btn-primary" id="btnNuevaJornada">+ Nueva jornada</button>
+        <button class="btn btn-ghost empuja-derecha" id="btnPapeleraJornadas">🗑 Papelera</button>
+        <button class="btn btn-ghost" id="btnAyudaFinanzasJornadas" title="Ayuda">❓ Ayuda</button>
+      </div>
+      <div class="cards-grid" id="cardsJornadas"></div>
+      <p class="empty-state" id="emptyJornadas" hidden>No hay jornadas registradas todavía. Crea la primera con "+ Nueva jornada".</p>
+    </div>
+
+    <div id="subview-gastos" class="subview">
+      <div class="view-toolbar">
+        <input type="search" id="buscarGasto" placeholder="Buscar gasto por concepto o categoría...">
+        <button class="btn btn-ghost" id="btnCategoriasGasto">⚙ Categorías</button>
+        <button class="btn btn-primary" id="btnNuevoGasto">+ Nuevo gasto</button>
+        <button class="btn btn-ghost empuja-derecha" id="btnExportarGastosPDF">🖨 Exportar PDF</button>
+        <button class="btn btn-ghost" id="btnPapeleraGastos">🗑 Papelera</button>
+        <button class="btn btn-ghost" id="btnAyudaFinanzasGastos" title="Ayuda">❓ Ayuda</button>
+      </div>
+      <div class="view-toolbar filtro-fecha-row">
+        <label class="filtro-fecha-label">Desde</label>
+        <input type="date" id="gastosFiltroDesde">
+        <label class="filtro-fecha-label">hasta</label>
+        <input type="date" id="gastosFiltroHasta">
+        <button class="btn btn-ghost btn-sm" id="btnLimpiarFiltroGastos">✕ Limpiar filtro</button>
+      </div>
+      <div class="stats-row" id="statsGastos"></div>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaGastos">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Categoría</th>
+              <th>Concepto</th>
+              <th>Jornada</th>
+              <th>Monto</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyGastos"></tbody>
+        </table>
+        <p class="empty-state" id="emptyGastos" hidden>No hay gastos registrados todavía. Crea el primero con "+ Nuevo gasto".</p>
+      </div>
+    </div>
+
+    <div id="subview-capital" class="subview">
+      <div class="view-toolbar">
+        <button class="btn btn-primary" id="btnNuevoCapital">+ Nuevo movimiento</button>
+        <button class="btn btn-ghost empuja-derecha" id="btnPapeleraCapital">🗑 Papelera</button>
+        <button class="btn btn-ghost" id="btnAyudaFinanzasCapital" title="Ayuda">❓ Ayuda</button>
+      </div>
+      <div class="stats-row" id="statsCapital"></div>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaCapital">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Nota</th>
+              <th>Monto</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCapital"></tbody>
+        </table>
+        <p class="empty-state" id="emptyCapital" hidden>No hay movimientos de capital todavía.</p>
+      </div>
+    </div>
+
+    <div id="subview-rentabilidad" class="subview">
+      <div class="view-toolbar filtro-fecha-row">
+        <label class="filtro-fecha-label">Desde</label>
+        <input type="date" id="rentabilidadFiltroDesde">
+        <label class="filtro-fecha-label">hasta</label>
+        <input type="date" id="rentabilidadFiltroHasta">
+        <button class="btn btn-ghost btn-sm" id="btnLimpiarFiltroRentabilidad">✕ Limpiar filtro</button>
+        <button class="btn btn-ghost empuja-derecha" id="btnExportarRentabilidadPDF">🖨 Exportar PDF</button>
+        <button class="btn btn-ghost" id="btnAyudaFinanzasRentabilidad" title="Ayuda">❓ Ayuda</button>
+      </div>
+      <p class="field-note">Los costos se calculan con los precios ACTUALES de los insumos, no con los precios históricos que tenían en cada fecha.</p>
+      <p class="field-note" id="rentabilidadJornadasExcluidas" style="color:var(--warn)" hidden></p>
+
+      <div class="stats-row" id="statsRentabilidad"></div>
+
+      <div class="chart-wrap">
+        <canvas id="chartRentabilidad"></canvas>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table" id="tablaRentabilidad">
+          <thead>
+            <tr>
+              <th class="th-sortable" data-sort="nombre">Plato <span class="sort-indicador"></span></th>
+              <th class="th-sortable" data-sort="cantidad">Cantidad vendida <span class="sort-indicador"></span></th>
+              <th class="th-sortable" data-sort="ingreso">Ingreso total <span class="sort-indicador"></span></th>
+              <th class="th-sortable" data-sort="costo">Costo total <span class="sort-indicador"></span></th>
+              <th class="th-sortable" data-sort="utilidad">Utilidad total <span class="sort-indicador"></span></th>
+              <th class="th-sortable" data-sort="margen">Margen % <span class="sort-indicador"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRentabilidad"></tbody>
+        </table>
+        <p class="empty-state" id="emptyRentabilidad" hidden>No hay pedidos en este rango de fechas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPRAS ================= -->
+  <section id="view-compras" class="view">
+    <h3 class="cuenta-seccion-titulo" style="margin-top:4px">Carrito activo</h3>
+    <div class="view-toolbar">
+      <button class="btn btn-primary empuja-derecha" id="btnFinalizarCompra">✅ Finalizar compra</button>
+      <button class="btn btn-ghost" id="btnExportarCarritoPDF">🖨 Exportar PDF</button>
+      <button class="btn btn-ghost" id="btnPapeleraCarrito">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnAyudaCompras" title="Ayuda">❓ Ayuda</button>
+    </div>
+    <p class="field-note" id="carritoNotaEliminadas" hidden></p>
+    <div class="table-wrap">
+      <table class="data-table" id="tablaCarritoItems">
+        <thead><tr><th>Plato</th><th>Cantidad de platos</th><th class="col-actions">Quitar</th></tr></thead>
+        <tbody id="tbodyCarritoItems"></tbody>
+      </table>
+      <p class="empty-state" id="emptyCarrito" hidden>Agrega platos desde Recetas usando "Calcular compra".</p>
+    </div>
+
+    <h3 class="cuenta-seccion-titulo">Insumos a comprar (consolidado)</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="tablaCarritoConsolidado">
+        <thead><tr><th>Insumo</th><th class="num">Cantidad total necesaria</th><th class="num">Costo total</th></tr></thead>
+        <tbody id="tbodyCarritoConsolidado"></tbody>
+        <tfoot><tr><td colspan="2">Total general</td><td class="num" id="carritoConsolidadoTotal">Bs 0</td></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="view-toolbar">
+      <h3 class="cuenta-seccion-titulo" style="margin:0">Historial de compras</h3>
+      <button class="btn btn-ghost empuja-derecha" id="btnExportarHistorialCompletoPDF" hidden>🖨 Exportar todo el historial</button>
+    </div>
+    <div id="historialComprasWrap"></div>
+  </section>
+
+</main>
+
+<!-- ================= MODAL INSUMO ================= -->
+<div class="modal-backdrop" id="modalInsumo" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalInsumoTitulo">Nuevo insumo</h2>
+    </div>
+    <form id="formInsumo">
+      <input type="hidden" id="insumoId">
+      <div class="form-row">
+        <label>Nombre del insumo *</label>
+        <input type="text" id="insumoNombre" required placeholder="Ej: Pechuga de pollo">
+      </div>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Categoría</label>
+          <select id="insumoCategoria"></select>
+        </div>
+        <div>
+          <label>Unidad de compra *</label>
+          <select id="insumoUnidad" required></select>
+        </div>
+      </div>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Precio por unidad *</label>
+          <input type="number" id="insumoPrecio" required min="0" step="any" placeholder="0.00">
+        </div>
+        <div>
+          <label>Proveedor (opcional)</label>
+          <input type="text" id="insumoProveedor" placeholder="Ej: Distribuidora XYZ">
+        </div>
+      </div>
+      <p class="form-hint" id="insumoPrecioHint"></p>
+      <div class="form-row">
+        <label>Merma (%)</label>
+        <input type="number" id="insumoMerma" min="0" max="100" step="any" value="0">
+        <p class="field-note">Porcentaje del insumo que se pierde antes de usarse (ej. cáscaras, huesos, recorte). Ajusta el costo real: si compras 1kg a Bs 7 con 10% de merma, el costo efectivo por kg utilizable sube a ~Bs 7,78. Déjalo en 0% si no aplica.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalInsumo">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar insumo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL HISTORIAL DE PRECIOS ================= -->
+<div class="modal-backdrop" id="modalHistorialPrecios" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalHistorialPreciosTitulo">Historial de precios</h2>
+    </div>
+    <p class="empty-state" id="historialPreciosVacio" hidden></p>
+    <div class="historial-precios-chart-wrap" id="historialPreciosChartWrap" hidden>
+      <canvas id="historialPreciosCanvas"></canvas>
+    </div>
+    <div style="padding:0 20px 18px" id="historialPreciosTablaWrap" hidden>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Fecha</th><th>Precio</th><th class="col-actions"></th></tr></thead>
+          <tbody id="tbodyHistorialPrecios"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalHistorialPrecios">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL RECETA ================= -->
+<div class="modal-backdrop" id="modalReceta" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalRecetaTitulo">Nueva receta</h2>
+    </div>
+    <form id="formReceta">
+      <input type="hidden" id="recetaId">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Nombre del plato *</label>
+          <input type="text" id="recetaNombre" required placeholder="Ej: Arroz con pollo">
+        </div>
+        <div>
+          <label>Categoría</label>
+          <select id="recetaCategoria"></select>
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Porciones que rinde la receta *</label>
+          <input type="number" id="recetaPorciones" required min="1" step="1" value="1" style="max-width:140px">
+        </div>
+        <div>
+          <label>Foto del plato (opcional)</label>
+          <div class="foto-picker">
+            <div class="foto-preview" id="recetaFotoPreview"><span class="foto-placeholder">Sin foto</span></div>
+            <div class="foto-picker-actions">
+              <label class="btn btn-ghost btn-sm" for="recetaFotoInput">📷 Subir foto</label>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnAjustarFoto" hidden>✎ Ajustar</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnQuitarFoto" hidden>Quitar</button>
+            </div>
+            <input type="file" id="recetaFotoInput" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Descripción (opcional)</label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnDescripcionReceta">📝 Agregar descripción</button>
+        </div>
+        <div>
+          <label>Preparación (opcional)</label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnInstruccionesCocina">📝 Agregar preparación</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Ingredientes</label>
+        <div class="table-wrap">
+          <table class="data-table" id="tablaIngredientes">
+            <thead>
+              <tr>
+                <th style="width:32%">Insumo</th>
+                <th>Cantidad usada</th>
+                <th>Unidad</th>
+                <th>Costo</th>
+                <th>Por porción</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIngredientes"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarIngrediente">+ Agregar ingrediente</button>
+      </div>
+
+      <div class="form-row">
+        <label>Otros costos de la receta</label>
+        <div class="table-wrap">
+          <table class="data-table" id="tablaCostosAdicionales">
+            <thead>
+              <tr>
+                <th style="width:32%">Concepto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Costo</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCostosAdicionales"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarCostoAdicional">+ Agregar costo</button>
+        <p class="field-note">Ej: mano de obra, gas, transporte, servicios, empaques. Se suman al costo total de la receta (antes de dividir entre las porciones).</p>
+        <datalist id="listaConceptosCosto">
+          <option value="Mano de obra">
+          <option value="Gas">
+          <option value="Transporte">
+          <option value="Servicios">
+          <option value="Empaques">
+        </datalist>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Margen deseado (%)</label>
+          <input type="number" id="recetaMargen" min="0" step="any" value="150">
+          <p class="field-note">% de ganancia sobre el costo (markup). Ej: 100% = el precio duplica el costo.</p>
+        </div>
+        <div>
+          <label>Precio de venta real (opcional)</label>
+          <input type="number" id="recetaPrecioVenta" min="0" step="any" placeholder="Déjalo vacío para usar el precio sugerido">
+        </div>
+      </div>
+
+      <div class="summary-panel" id="resumenReceta"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalReceta">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar receta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL AJUSTAR FOTO ================= -->
+<div class="modal-backdrop" id="modalAjustarFoto" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Ajustar foto</h2>
+    </div>
+    <div style="padding:18px 20px">
+      <div id="ajustarFotoMarco" class="ajustar-foto-marco"></div>
+      <div class="form-row" style="margin-top:14px">
+        <label>Zoom</label>
+        <input type="range" id="ajustarFotoZoom" min="100" max="300" step="1" value="100">
+      </div>
+      <p class="field-note">Arrastra la imagen para encuadrarla, y usa el control de zoom para acercar o alejar.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalAjustarFoto">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btnGuardarAjusteFoto">Usar esta foto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL DESCRIPCIÓN DE LA RECETA ================= -->
+<div class="modal-backdrop" id="modalDescripcion" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Descripción de la receta</h2>
+    </div>
+    <form id="formDescripcion">
+      <div class="form-row">
+        <label>Descripción</label>
+        <textarea id="descripcionTexto" rows="5" placeholder="Ej: Ceviche fresco de pescado blanco con leche de tigre picante, camote y choclo."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalDescripcion">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar descripción</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL PREPARACIÓN ================= -->
+<div class="modal-backdrop" id="modalInstrucciones" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Preparación</h2>
+    </div>
+    <form id="formInstrucciones">
+      <div class="form-row">
+        <label>Pasos de preparación</label>
+        <textarea id="instruccionesTexto" rows="12" placeholder="Ej:&#10;1. Sofreír la cebolla y el ajo.&#10;2. Agregar el pollo y dorar por 5 minutos.&#10;3. Incorporar el arroz y el caldo..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalInstrucciones">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar preparación</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DETALLE RECETA (solo lectura) ================= -->
+<div class="modal-backdrop" id="modalDetalle" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="detalleTitulo">Detalle de la receta</h2>
+    </div>
+    <div id="detalleContenido"></div>
+    <div class="modal-footer" style="padding:6px 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalDetalle">Cerrar</button>
+      <button type="button" class="btn btn-ghost" id="btnPdfDesdeDetalle">🖨 Descargar PDF</button>
+      <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle">Editar receta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL CALCULAR COMPRA ================= -->
+<div class="modal-backdrop" id="modalCalcularCompra" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalCalcularCompraTitulo">Calcular compra</h2>
+    </div>
+    <div style="padding:0 20px 18px">
+      <div class="form-row">
+        <label for="calcularCompraCantidad">Cantidad de platos a preparar</label>
+        <input type="number" id="calcularCompraCantidad" min="0" step="any">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Insumo</th><th class="num">Cantidad necesaria</th><th class="num">Costo total</th></tr>
+          </thead>
+          <tbody id="tbodyCalcularCompra"></tbody>
+          <tfoot>
+            <tr><td colspan="2">Total general</td><td class="num" id="calcularCompraTotal">Bs 0</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;padding:0 20px 18px">
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn btn-ghost" id="btnPdfCalcularCompra">🖨 Exportar PDF</button>
+        <button type="button" class="btn btn-ghost" id="btnAgregarCarritoCalcularCompra">🛒 Agregar al carrito</button>
+      </div>
+      <button type="button" class="btn btn-primary" data-close-modal="modalCalcularCompra">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL CATEGORÍAS ================= -->
+<div class="modal-backdrop" id="modalCategorias" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="categoriasModalTitulo">Categorías</h2>
+    </div>
+    <div style="padding:18px 20px">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Categoría</th><th></th><th class="col-actions"></th></tr></thead>
+          <tbody id="tbodyCategorias"></tbody>
+        </table>
+        <p class="empty-state" id="emptyCategorias" hidden>No hay categorías todavía.</p>
+      </div>
+      <div class="form-row" style="margin-top:14px;display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1">
+          <label>Nueva categoría</label>
+          <input type="text" id="nuevaCategoriaInput" placeholder="Ej: Panadería">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnAgregarCategoria">+ Agregar</button>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalCategorias">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL PAPELERA ================= -->
+<div class="modal-backdrop" id="modalPapelera" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="papeleraModalTitulo">Papelera</h2>
+    </div>
+    <div style="padding:18px 20px">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Elemento</th><th>Eliminado</th><th class="col-actions"></th></tr></thead>
+          <tbody id="tbodyPapelera"></tbody>
+        </table>
+        <p class="empty-state" id="emptyPapelera" hidden>La papelera está vacía.</p>
+      </div>
+      <p class="field-note">Los elementos eliminados quedan aquí hasta que los restaures o los borres definitivamente.</p>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px;justify-content:space-between">
+      <button type="button" class="btn btn-ghost" id="btnVaciarPapelera">Vaciar papelera</button>
+      <button type="button" class="btn btn-primary" data-close-modal="modalPapelera">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL PEDIDO ================= -->
+<div class="modal-backdrop" id="modalPedido" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalPedidoTitulo">Nuevo pedido</h2>
+    </div>
+    <form id="formPedido">
+      <input type="hidden" id="pedidoId">
+      <div class="form-row">
+        <label id="labelPedidoCliente">Cliente *</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="pedidoClienteNombre" list="listaClientesSugeridos" style="flex:1" class="input-mayusculas" placeholder="Escribe el nombre del cliente...">
+          <!-- sin "required": ahora es condicional (opcional en Venta de mostrador) -- la
+               validación real vive en el submit de formPedido en app.js. -->
+          <datalist id="listaClientesSugeridos"></datalist>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnNuevoClienteDesdePedido">+ Nuevo cliente</button>
+        </div>
+        <p class="field-note">Si el nombre no coincide con un cliente existente, se creará uno nuevo automáticamente al guardar.</p>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Fecha de entrega *</label>
+          <input type="date" id="pedidoFecha" required>
+        </div>
+        <div>
+          <label>Hora de entrega *</label>
+          <div class="hora-picker">
+            <select id="pedidoHoraH" required></select>
+            <select id="pedidoHoraM" required></select>
+            <select id="pedidoHoraAmPm" required>
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Jornada / evento (opcional)</label>
+        <select id="pedidoJornada"></select>
+        <div class="summary-panel" id="resumenPlanPedidoJornada" style="margin-top:8px" hidden></div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="pedidoPagado" style="width:auto">
+            Ya cobrado
+          </label>
+        </div>
+        <div>
+          <label>Método de pago</label>
+          <select id="pedidoTipoPago">
+            <option value="">Sin especificar</option>
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="deposito">🏦 Depósito</option>
+          </select>
+        </div>
+      </div>
+      <p class="field-note">Son independientes: el cliente puede elegir un método de pago sin que el pedido esté cobrado todavía (ej. "pagará en efectivo al recoger"). Para cambiar el estado después de crear el pedido, también podés usar los botones "Pago"/"Tipo de pago" en la tabla.</p>
+
+      <div class="form-row">
+        <label>Platos del pedido</label>
+        <div class="table-wrap">
+          <table class="data-table" id="tablaPedidoItems">
+            <thead>
+              <tr>
+                <th style="width:40%">Plato</th>
+                <th>Cantidad</th>
+                <th class="text-right">Precio</th>
+                <th class="text-right">Subtotal</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPedidoItems"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarPedidoItem">+ Agregar plato</button>
+      </div>
+
+      <div class="form-row">
+        <label>Notas del pedido (opcional)</label>
+        <textarea id="pedidoNotas" rows="2" placeholder="Ej: sin cebolla, dirección de entrega, indicaciones especiales..."></textarea>
+      </div>
+
+      <div class="summary-panel" id="resumenPedido"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalPedido">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar pedido</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL HISTORIAL DE PEDIDOS POR CLIENTE ================= -->
+<div class="modal-backdrop" id="modalHistorialPedidosCliente" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalHistorialPedidosClienteTitulo">Historial de pedidos</h2>
+    </div>
+    <p class="cell-muted" id="historialPedidosClienteCreadoInfo" style="margin:-4px 20px 14px;font-size:12.5px"></p>
+    <p class="empty-state" id="historialPedidosClienteVacio" hidden>Sin pedidos registrados aún.</p>
+    <div style="padding:0 20px 18px" id="historialPedidosClienteTablaWrap" hidden>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>N.°</th><th>Entrega</th><th>Platos</th><th>Total</th><th>Pago</th><th>Tipo de pago</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyHistorialPedidosCliente"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px;justify-content:space-between">
+      <button type="button" class="btn btn-ghost" id="btnPdfHistorialPedidosCliente">🖨 Descargar PDF</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="modalHistorialPedidosCliente">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL CLIENTE ================= -->
+<div class="modal-backdrop" id="modalCliente" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalClienteTitulo">Nuevo cliente</h2>
+    </div>
+    <form id="formCliente">
+      <input type="hidden" id="clienteId">
+      <p class="cell-muted" id="clienteCreadoInfo" hidden style="margin:-4px 0 14px;font-size:12.5px"></p>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Nombre *</label>
+          <input type="text" id="clienteNombre" required placeholder="Ej: MARÍA GÓMEZ" class="input-mayusculas">
+        </div>
+        <div>
+          <label>Teléfono</label>
+          <input type="tel" id="clienteTelefono" placeholder="Ej: 300 123 4567">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Dirección (opcional)</label>
+        <input type="text" id="clienteDireccion" placeholder="Ej: Cra 10 # 20-30">
+      </div>
+      <div class="form-row">
+        <label>Notas (opcional)</label>
+        <input type="text" id="clienteNotas" placeholder="Ej: prefiere entregas por la tarde">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalCliente">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar cliente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL JORNADA ================= -->
+<div class="modal-backdrop" id="modalJornada" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalJornadaTitulo">Nueva jornada</h2>
+    </div>
+    <form id="formJornada">
+      <input type="hidden" id="jornadaId">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Nombre *</label>
+          <input type="text" id="jornadaNombre" required placeholder="Ej: Venta sábado 9 de agosto">
+        </div>
+        <div>
+          <label>Tipo *</label>
+          <select id="jornadaTipo" required>
+            <option value="venta_regular">Venta regular (fin de semana)</option>
+            <option value="evento">Evento / catering</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Fecha *</label>
+        <input type="date" id="jornadaFecha" required>
+      </div>
+      <div class="form-row">
+        <label>Notas (opcional)</label>
+        <textarea id="jornadaNotas" rows="2" placeholder="Ej: detalles del evento, cliente, ubicación..."></textarea>
+      </div>
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="jornadaIncluirEnAnalisis" checked style="width:auto">
+          Incluir en el Reporte de Rentabilidad
+        </label>
+        <p class="field-note">Desmárcalo para Jornadas que no reflejan el comportamiento habitual del negocio (ej. un evento benéfico) -- sus pedidos se excluyen del análisis de tendencias/márgenes, pero siguen apareciendo normal en Jornadas, Finanzas y Clientes.</p>
+      </div>
+      <div class="form-row">
+        <label>Planificación de platos (opcional)</label>
+        <p class="field-note">Define cuántas unidades de cada plato planeas vender en esta jornada. Se compara contra lo que ya se vendió en los pedidos vinculados.</p>
+        <div class="table-wrap">
+          <table class="data-table" id="tablaPlanJornada">
+            <thead>
+              <tr>
+                <th style="width:65%">Plato</th>
+                <th>Cantidad planeada</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPlanJornada"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarPlanJornada">+ Agregar plato al plan</button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalJornada">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar jornada</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DETALLE JORNADA (solo lectura) ================= -->
+<div class="modal-backdrop" id="modalDetalleJornada" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="detalleJornadaTitulo">Detalle de la jornada</h2>
+    </div>
+    <div id="detalleJornadaContenido"></div>
+    <div class="modal-footer" style="padding:6px 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalDetalleJornada">Cerrar</button>
+      <button type="button" class="btn btn-ghost" id="btnExportarReporteJornada">🖨 Exportar reporte</button>
+      <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalleJornada">Editar jornada</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL DONACIÓN ================= -->
+<div class="modal-backdrop" id="modalDonacion" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalDonacionTitulo">Nueva donación</h2>
+    </div>
+    <form id="formDonacion">
+      <input type="hidden" id="donacionId">
+      <div class="form-row">
+        <label>Concepto *</label>
+        <input type="text" id="donacionConcepto" required placeholder="Ej: APORTE DE LA FAMILIA PÉREZ" class="input-mayusculas">
+      </div>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Monto *</label>
+          <input type="number" id="donacionMonto" required min="0" step="any" placeholder="0.00">
+        </div>
+        <div>
+          <label>Fecha *</label>
+          <input type="date" id="donacionFecha" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalDonacion">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar donación</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL GASTO ================= -->
+<div class="modal-backdrop" id="modalGasto" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalGastoTitulo">Nuevo gasto</h2>
+    </div>
+    <form id="formGasto">
+      <input type="hidden" id="gastoId">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Fecha *</label>
+          <input type="date" id="gastoFecha" required>
+        </div>
+        <div>
+          <label>Categoría</label>
+          <select id="gastoCategoria"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Concepto *</label>
+        <input type="text" id="gastoConcepto" required placeholder="Ej: Compra de pollo y verduras">
+      </div>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Monto *</label>
+          <input type="number" id="gastoMonto" required min="0" step="any" placeholder="0.00">
+        </div>
+        <div>
+          <label>Jornada (opcional)</label>
+          <select id="gastoJornada"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalGasto">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar gasto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL CAPITAL ================= -->
+<div class="modal-backdrop" id="modalCapital" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalCapitalTitulo">Nuevo movimiento de capital</h2>
+    </div>
+    <form id="formCapital">
+      <input type="hidden" id="capitalId">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Tipo *</label>
+          <select id="capitalTipo" required>
+            <option value="aporte">Aporte (entra capital)</option>
+            <option value="retiro">Retiro (sale capital)</option>
+          </select>
+        </div>
+        <div>
+          <label>Fecha *</label>
+          <input type="date" id="capitalFecha" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Monto *</label>
+        <input type="number" id="capitalMonto" required min="0" step="any" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label>Nota (opcional)</label>
+        <input type="text" id="capitalNota" placeholder="Ej: Aporte inicial, préstamo familiar...">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalCapital">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar movimiento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL EXPORTAR PEDIDOS PDF ================= -->
+<div class="modal-backdrop" id="modalExportarPedidos" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Exportar pedidos a PDF</h2>
+    </div>
+    <form id="formExportarPedidos">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Desde *</label>
+          <input type="date" id="pdfDesde" required>
+        </div>
+        <div>
+          <label>Hasta *</label>
+          <input type="date" id="pdfHasta" required>
+        </div>
+      </div>
+      <p class="field-note">Se incluyen los pedidos cuya fecha de entrega esté dentro de este rango (ambos incluidos).</p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modalExportarPedidos">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Generar PDF</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DATOS (Exportar/Importar/Excel/CSV) ================= -->
+<div class="modal-backdrop" id="modalDatos" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Datos</h2>
+    </div>
+    <div style="padding:4px 20px 20px;display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-ghost" id="btnExport" style="width:100%" title="Descargar todos los datos en un archivo .json">
+        <span class="icon">⬇</span> Exportar
+      </button>
+      <button class="btn btn-ghost" id="btnImport" style="width:100%" title="Cargar datos desde un archivo .json">
+        <span class="icon">⬆</span> Importar
+      </button>
+      <input type="file" id="fileImport" accept="application/json" hidden>
+      <button class="btn btn-ghost" id="btnExportExcel" style="width:100%" title="Descargar toda la información en Excel, con las fórmulas de cálculo visibles">
+        <span class="icon">📊</span> Excel
+      </button>
+      <button class="btn btn-ghost" id="btnExportCSV" style="width:100%" title="Descargar toda la información en archivos CSV (uno por cada tabla)">
+        <span class="icon">📄</span> CSV
+      </button>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalDatos">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL AYUDA ================= -->
+<div class="modal-backdrop" id="modalAyuda" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalAyudaTitulo">Ayuda</h2>
+    </div>
+    <div id="modalAyudaContenido" class="ayuda-contenido"></div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-primary" data-close-modal="modalAyuda">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL AUDITORÍA ================= -->
+<div class="modal-backdrop" id="modalAuditoria" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>📋 Actividad</h2>
+    </div>
+    <div style="padding:0 20px 18px">
+      <div class="view-toolbar filtro-fecha-row">
+        <label class="filtro-fecha-label">Tabla</label>
+        <select id="auditoriaFiltroTabla"><option value="">Todas</option></select>
+        <label class="filtro-fecha-label">Usuario</label>
+        <select id="auditoriaFiltroUsuario"><option value="">Todos</option></select>
+        <label class="filtro-fecha-label">Desde</label>
+        <input type="date" id="auditoriaFiltroDesde">
+        <label class="filtro-fecha-label">hasta</label>
+        <input type="date" id="auditoriaFiltroHasta">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnLimpiarFiltroAuditoria">✕ Limpiar filtro</button>
+        <button type="button" class="btn btn-ghost" id="btnExportarAuditoriaPDF">🖨 Exportar PDF</button>
+      </div>
+      <p class="field-note" id="auditoriaNotaLimite" hidden>Mostrando los 200 registros más recientes que coinciden con el filtro — puede haber más en el historial completo; acota el rango de fechas para ver otros.</p>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaAuditoria">
+          <thead>
+            <tr><th>Fecha</th><th>Usuario</th><th>Tabla</th><th>Acción</th><th>Resumen</th></tr>
+          </thead>
+          <tbody id="tbodyAuditoria"></tbody>
+        </table>
+        <p class="empty-state" id="emptyAuditoria" hidden>No hay actividad registrada todavía.</p>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-primary" data-close-modal="modalAuditoria">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL MI CUENTA ================= -->
+<div class="modal-backdrop" id="modalMiCuenta" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>Mi cuenta</h2>
+    </div>
+    <form id="formMiCuenta">
+      <div style="padding:0 20px">
+        <h3 class="cuenta-seccion-titulo">Foto de perfil</h3>
+        <div class="form-row">
+          <div class="foto-picker">
+            <div class="foto-preview foto-preview-circular" id="avatarModalPreview"><span class="foto-placeholder">🍽️</span></div>
+            <div class="foto-picker-actions">
+              <label class="btn btn-ghost btn-sm" for="avatarInput">🖼️ Cambiar foto</label>
+              <input type="file" id="avatarInput" accept="image/*" hidden>
+            </div>
+          </div>
+          <p class="field-note">Se sube apenas la eliges, sin necesidad de presionar "Guardar cambios".</p>
+        </div>
+
+        <h3 class="cuenta-seccion-titulo">Datos personales</h3>
+        <div class="form-row">
+          <label>Nombre completo</label>
+          <input type="text" id="cuentaNombreCompleto" placeholder="Tu nombre completo">
+        </div>
+        <div class="form-row form-row-split">
+          <div>
+            <label>Teléfono</label>
+            <input type="tel" id="cuentaTelefono" placeholder="Ej: 70000000">
+          </div>
+          <div>
+            <label>Nombre de usuario</label>
+            <input type="text" id="cuentaNickname" placeholder="Ej: jmario" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="cuentaEmailSoloLectura" disabled>
+          <p class="field-note">Cambiar el email requiere un proceso de confirmación por correo aparte -- no disponible todavía.</p>
+        </div>
+
+        <h3 class="cuenta-seccion-titulo">Seguridad</h3>
+        <div class="form-row form-row-split">
+          <div>
+            <label>Nueva contraseña</label>
+            <input type="password" id="cuentaNuevaPassword" autocomplete="new-password" placeholder="Deja vacío para no cambiarla">
+          </div>
+          <div>
+            <label>Confirmar nueva contraseña</label>
+            <input type="password" id="cuentaConfirmarPassword" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;padding:16px 20px">
+        <button type="button" class="btn btn-ghost cuenta-opcion-danger" id="btnCerrarSesion">🚪 Cerrar sesión</button>
+        <div style="display:flex;gap:10px">
+          <button type="button" class="btn btn-ghost" data-close-modal="modalMiCuenta">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnGuardarMiCuenta">Guardar cambios</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL CONFIGURACIÓN ================= -->
+<div class="modal-backdrop" id="modalConfiguracion" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Configuración</h2>
+    </div>
+    <div style="padding:18px 20px">
+      <div class="form-row form-row-split">
+        <div>
+          <label>Nombre de la plataforma</label>
+          <input type="text" id="configNombreApp" placeholder="KitchenCost">
+        </div>
+        <div>
+          <label>Subtítulo</label>
+          <input type="text" id="configSubtituloApp" placeholder="Insumos, recetas y precio de venta">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Apariencia</label>
+        <div class="tema-opciones">
+          <button type="button" class="btn btn-ghost tema-btn" data-tema="auto">🖥 Automático</button>
+          <button type="button" class="btn btn-ghost tema-btn" data-tema="light">☀ Claro</button>
+          <button type="button" class="btn btn-ghost tema-btn" data-tema="dark">🌙 Oscuro</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Logo de la plataforma (opcional)</label>
+        <div class="foto-picker">
+          <div class="foto-preview" id="logoPreview"><span class="foto-placeholder">🍽️</span></div>
+          <div class="foto-picker-actions">
+            <label class="btn btn-ghost btn-sm" for="logoInput">🖼 Subir logo</label>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnQuitarLogo" hidden>Restablecer</button>
+          </div>
+          <input type="file" id="logoInput" accept="image/*" hidden>
+        </div>
+        <p class="field-note">Reemplaza el ícono 🍽️ junto al nombre. Se guarda solo en este navegador.</p>
+      </div>
+      <div class="form-row">
+        <label>Fondo de la plataforma (opcional, hasta 5 imágenes guardadas)</label>
+        <div class="fondos-grid" id="fondosGrid"></div>
+        <div class="fondos-acciones">
+          <label class="btn btn-ghost btn-sm" for="fondoInput" id="btnSubirFondoLabel">🖼 Subir imagen</label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnQuitarFondo">Quitar fondo actual</button>
+          <input type="file" id="fondoInput" accept="image/*" hidden>
+        </div>
+        <p class="field-note">Las imágenes se guardan solo en este navegador. Toca una para usarla como fondo, o la ✕ para eliminarla.</p>
+      </div>
+      <div class="form-row form-row-split">
+        <div>
+          <label>Ajuste de la imagen</label>
+          <select id="fondoAjuste">
+            <option value="cover">Cubrir pantalla</option>
+            <option value="contain">Ajustar completa</option>
+            <option value="repeat">Mosaico (repetir)</option>
+            <option value="stretch">Estirar</option>
+          </select>
+        </div>
+        <div>
+          <label>Opacidad (<span id="fondoOpacidadValor">100</span>%)</label>
+          <input type="range" id="fondoOpacidad" min="10" max="100" step="5" value="100">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:0 20px 18px">
+      <button type="button" class="btn btn-ghost" data-close-modal="modalConfiguracion">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/vendor/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vendor/xlsx.full.min.js"></script>
+<script src="js/vendor/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

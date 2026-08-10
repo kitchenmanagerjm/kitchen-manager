@@ -1,0 +1,22 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores / IDE
+.vscode/
+.idea/
+*.swp
+
+# Node (por si algún script en scripts/ llega a necesitar dependencias locales)
+node_modules/
+npm-debug.log*
+
+# Variables de entorno / secretos locales -- nunca deben subirse
+.env
+.env.*
+
+# Archivos temporales
+*.tmp
+*.bak
+~$*

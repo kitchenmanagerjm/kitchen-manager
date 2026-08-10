@@ -1,0 +1,505 @@
+:root{
+  --bg:#f6f5f2;
+  --surface:#ffffff;
+  --surface-alt:#fbf9f6;
+  --border:#e4e0d8;
+  --text:#2a2622;
+  --text-muted:#7a736a;
+  --accent:#c1440e;
+  --accent-dark:#9c3609;
+  --accent-soft:#fbe6db;
+  --good:#2e7d32;
+  --good-soft:#e6f4e6;
+  --warn:#b8860b;
+  --warn-soft:#fbf1d9;
+  --bad:#c62828;
+  --bad-soft:#fbe4e4;
+  --info:#1565c0;
+  --info-soft:#e3edfb;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(30,20,10,.06), 0 4px 12px rgba(30,20,10,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1a18;
+    --surface:#242220;
+    --surface-alt:#2b2925;
+    --border:#3a372f;
+    --text:#ece8e1;
+    --text-muted:#a89f8f;
+    --accent:#e2712d;
+    --accent-dark:#f08a4b;
+    --accent-soft:#3a2a1f;
+    --good:#7bc47f;
+    --good-soft:#20301f;
+    --warn:#e0b84a;
+    --warn-soft:#332a12;
+    --bad:#e57373;
+    --bad-soft:#3a2020;
+    --info:#6ea8f0;
+    --info-soft:#1c2c3f;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.35);
+  }
+}
+
+/* overrides explícitos: ganan sobre la preferencia del sistema cuando el usuario elige el tema a mano */
+:root[data-theme="light"]{
+  --bg:#f6f5f2; --surface:#ffffff; --surface-alt:#fbf9f6; --border:#e4e0d8;
+  --text:#2a2622; --text-muted:#7a736a; --accent:#c1440e; --accent-dark:#9c3609; --accent-soft:#fbe6db;
+  --good:#2e7d32; --good-soft:#e6f4e6; --warn:#b8860b; --warn-soft:#fbf1d9; --bad:#c62828; --bad-soft:#fbe4e4;
+  --info:#1565c0; --info-soft:#e3edfb; --shadow:0 1px 2px rgba(30,20,10,.06), 0 4px 12px rgba(30,20,10,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#1b1a18; --surface:#242220; --surface-alt:#2b2925; --border:#3a372f;
+  --text:#ece8e1; --text-muted:#a89f8f; --accent:#e2712d; --accent-dark:#f08a4b; --accent-soft:#3a2a1f;
+  --good:#7bc47f; --good-soft:#20301f; --warn:#e0b84a; --warn-soft:#332a12; --bad:#e57373; --bad-soft:#3a2020;
+  --info:#6ea8f0; --info-soft:#1c2c3f; --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background-color:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  position:relative;
+}
+#fondoCapa{
+  position:fixed;inset:0;z-index:-1;
+  background-position:center;background-repeat:no-repeat;background-size:cover;
+  opacity:1;
+}
+
+/* ---------- topbar ---------- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;flex-wrap:wrap;gap:12px;
+}
+.topbar-brand{display:flex;align-items:center;gap:12px}
+.topbar-icon{font-size:64px;display:inline-flex}
+.topbar-icon img{width:80px;height:80px;object-fit:cover;border-radius:12px}
+.topbar-brand h1{margin:0;font-size:19px;font-weight:700}
+.topbar-brand p{margin:1px 0 0;font-size:12.5px;color:var(--text-muted)}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+
+/* ---------- login (Fase A: solo la pantalla, sin tocar RLS todavía) ---------- */
+.auth-overlay{
+  position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:20px;
+}
+.auth-overlay[hidden]{display:none}
+body.auth-bloqueado{overflow:hidden}
+.auth-box{
+  width:100%;max-width:340px;padding:32px 28px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;
+}
+.auth-logo{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px}
+.auth-logo-icono{font-size:84px;line-height:1;display:inline-flex}
+.auth-logo-icono img{width:112px;height:112px;object-fit:cover;border-radius:16px}
+.auth-logo h1{margin:0;font-size:18px;font-weight:700;text-align:center;color:var(--text)}
+.auth-label{font-size:12.5px;font-weight:600;color:var(--text-muted)}
+.auth-box input{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13.5px}
+.auth-error{color:var(--bad);font-size:12.5px;margin:0}
+.auth-btn{margin-top:8px;width:100%;justify-content:center}
+/* .auth-box ya no es el <form> en sí (ahora contiene 3: login, solicitar código, restablecer
+   con código) -- cada uno necesita su propio flex-column+gap para que sus campos se apilen
+   igual que antes. */
+.auth-box form{display:flex;flex-direction:column;gap:10px}
+.auth-link{
+  background:none;border:none;color:var(--accent);font-size:12.5px;cursor:pointer;
+  padding:2px 0;text-align:center;font-family:inherit;
+}
+.auth-link:hover{text-decoration:underline}
+.auth-info{font-size:12px;color:var(--text-muted);margin:0;text-align:center;line-height:1.4}
+#recuperarCodigo{text-align:center;font-size:20px;letter-spacing:6px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+/* empuja hacia la derecha de su fila (view-toolbar es flex) todo lo que venga después --
+   se usa en el primer botón "movido" de cada fila, para agruparlos contra el borde derecho
+   sin afectar el resto de los botones que ya estaban ahí. */
+.empuja-derecha{margin-left:auto}
+
+/* ---------- tabs ---------- */
+.tabs{
+  display:flex;gap:5px;padding:0 24px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:sticky;top:65px;z-index:19;
+}
+.tab-btn{
+  position:relative;border:none;background:none;padding:14px 18px;font-size:18px;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;
+}
+.badge-carrito{
+  position:absolute;top:4px;right:2px;min-width:17px;height:17px;border-radius:999px;
+  background:var(--accent);color:#fff;font-size:10.5px;font-weight:800;line-height:17px;
+  text-align:center;padding:0 3px;box-shadow:0 0 0 2px var(--surface);
+}
+.badge-carrito[hidden]{display:none}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------- subtabs (Finanzas) ---------- */
+.subtabs{display:flex;gap:4px;margin:4px 0 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.subtab-btn{
+  border:none;background:none;padding:9px 14px;font-size:13.5px;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;
+}
+.subtab-btn:hover{color:var(--text)}
+.subtab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.subview{display:none}
+.subview.active{display:block}
+
+main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
+
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s;
+  text-decoration:none; /* .btn en un <a> (ej. "Guía de uso") no debe verse subrayado */
+}
+.btn:hover{background:var(--surface-alt)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-ghost{background:var(--surface)}
+.btn-sm{padding:6px 10px;font-size:12.5px}
+.btn-lg{padding:13px 22px;font-size:15.5px;border-radius:10px}
+.btn-icon{
+  border:none;background:none;cursor:pointer;font-size:15px;padding:5px 7px;
+  border-radius:6px;color:var(--text-muted);
+}
+.btn-icon:hover{background:var(--surface-alt);color:var(--text)}
+.btn-icon.danger:hover{color:var(--bad);background:var(--bad-soft)}
+.btn-favorito.activo{color:#f5b301}
+.btn-favorito.activo:hover{color:#d99a00}
+
+.btn-pago{
+  border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;
+  cursor:pointer;white-space:nowrap;transition:filter .1s;
+}
+.btn-pago:hover{filter:brightness(0.95)}
+.btn-pago.pendiente{background:var(--bad-soft);color:var(--bad)}
+.btn-pago.cobrado{background:var(--good-soft);color:var(--good)}
+.btn-pago.efectivo{background:var(--info-soft);color:var(--info)}
+.btn-pago.deposito{background:var(--accent-soft);color:var(--accent)}
+.btn-pago.sin-tipo{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
+.btn-pago.sin_accion{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
+.btn-pago.preparando{background:var(--warn-soft);color:var(--warn)}
+.btn-pago.terminado{background:var(--accent-soft);color:var(--accent)}
+.btn-pago.enviado{background:var(--info-soft);color:var(--info)}
+.btn-pago.entregado{background:var(--good-soft);color:var(--good)}
+.btn-pago.no-cancelado{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+.btn-pago.cancelado{background:var(--bad-soft);color:var(--bad)}
+.pedido-platos{font-size:12.5px;color:var(--text-muted);white-space:nowrap}
+.pedido-notas{font-size:12.5px;color:var(--text-muted);max-width:480px}
+.fila-cancelada{opacity:.55}
+.fila-cancelada .cell-nombre{text-decoration:line-through}
+
+/* ---------- toolbars & stats ---------- */
+.view-toolbar{display:flex;gap:10px;margin:18px 0 14px;flex-wrap:wrap}
+.view-toolbar input[type="search"]{
+  /* antes 50% -- con Exportar/Papelera/Ayuda ahora también en esta fila (además de Categorías
+     y el botón "+ Nuevo X" que ya estaban), a 50% la fila se quedaba sin espacio y esos 3
+     últimos botones caían a una segunda línea. */
+  flex:0 1 38%;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:13.5px;
+}
+.filtro-fecha-row{
+  align-items:center;margin-top:-6px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;box-shadow:var(--shadow);
+}
+.filtro-fecha-row input[type="date"],.filtro-fecha-row select{
+  padding:8px 10px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-alt);color:var(--text);font-size:13px;
+}
+.filtro-fecha-label{font-size:12.5px;color:var(--text-muted);white-space:nowrap}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 16px;min-width:130px;box-shadow:var(--shadow);
+}
+.stat-card .stat-value{font-size:19px;font-weight:700}
+.stat-card .stat-label{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
+
+.stat-card-lista{display:flex;flex-direction:column;gap:3px}
+.stat-card-lista .stat-label{margin-bottom:2px}
+.stat-card-lista-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.stat-card-lista-header .stat-label{margin-bottom:0}
+.stat-lista-toggle{
+  background:none;border:none;padding:0 2px;margin:-2px 0;cursor:pointer;
+  color:var(--accent);font-size:18px;font-weight:800;line-height:1;transition:transform .15s;
+}
+.stat-lista-toggle:hover{color:var(--accent-dark)}
+.stat-card-lista.colapsado .stat-lista-fila{display:none}
+.stat-card-lista.colapsado .stat-lista-toggle{transform:rotate(-90deg)}
+.stat-lista-fila{font-size:13px;display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.stat-lista-valor{font-weight:700;font-size:15px;min-width:18px}
+
+.chart-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px;margin-bottom:16px;height:280px;
+}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+
+/* ---------- table ---------- */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;box-shadow:var(--shadow);margin-bottom:10px}
+
+/* tablas dentro de una sección del detalle de Jornada/Receta (Ingresos, Gastos, Plan de
+   platos): con muchos pedidos pueden crecer mucho y estirar todo el modal -- se les pone un
+   alto máximo con scroll propio (funciona con rueda del mouse de forma nativa, sin JS). */
+.detail-section-body .table-wrap,#modalAuditoria .table-wrap{
+  max-height:340px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.detail-section-body .table-wrap::-webkit-scrollbar,#modalAuditoria .table-wrap::-webkit-scrollbar{width:8px}
+.detail-section-body .table-wrap::-webkit-scrollbar-track,#modalAuditoria .table-wrap::-webkit-scrollbar-track{background:transparent}
+.detail-section-body .table-wrap::-webkit-scrollbar-thumb,#modalAuditoria .table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+.detail-section-body .table-wrap::-webkit-scrollbar-thumb:hover,#modalAuditoria .table-wrap::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+.detail-section-body .table-wrap thead th,#modalAuditoria .table-wrap thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.data-table th{
+  text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;
+  color:var(--text-muted);padding:10px 14px;border-bottom:1px solid var(--border);
+  background:var(--surface-alt);white-space:nowrap;
+}
+.data-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tfoot td{font-weight:700;background:var(--surface-alt)}
+.input-mayusculas{text-transform:uppercase}
+.th-sortable{cursor:pointer;user-select:none}
+.th-sortable:hover{color:var(--text)}
+.sort-indicador{display:inline-block;width:10px;color:var(--accent)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr:hover{background:var(--surface-alt)}
+.col-actions{text-align:right;width:1%;white-space:nowrap}
+.text-right{text-align:right}
+.text-center{text-align:center}
+.empty-state{padding:30px;text-align:center;color:var(--text-muted);font-size:13.5px}
+.historial-precios-chart-wrap{position:relative;height:260px;padding:4px 20px 18px}
+
+.cell-nombre{font-weight:600;min-width:130px}
+.cell-muted{color:var(--text-muted);font-size:12.5px}
+.cell-nowrap{white-space:nowrap}
+
+/* ---------- badges ---------- */
+.badge{
+  display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:11.5px;font-weight:700;
+}
+.badge-good{background:var(--good-soft);color:var(--good)}
+.badge-warn{background:var(--warn-soft);color:var(--warn)}
+.badge-bad{background:var(--bad-soft);color:var(--bad)}
+.badge-neutral{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ---------- cards grid (recetas) ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.recipe-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:transform .1s,box-shadow .1s,border-color .1s;
+  display:flex;flex-direction:column;gap:8px;overflow:hidden;
+}
+.recipe-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(30,20,10,.12);border-color:var(--accent)}
+.recipe-card-photo{
+  margin:-16px -16px 0;width:calc(100% + 32px);height:140px;object-fit:cover;
+  background:var(--surface-alt);
+}
+.recipe-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.recipe-card-head h3{margin:0;font-size:15.5px}
+.recipe-card-cat{font-size:11.5px;color:var(--text-muted)}
+.recipe-card-metrics{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-muted);margin-top:auto}
+.recipe-card-metrics b{display:block;color:var(--text);font-size:15px}
+.recipe-card-actions{display:flex;justify-content:flex-end;gap:3px;margin-top:-6px}
+/* más grandes que el .btn-icon genérico (que sigue igual en tablas/Papelera/etc.) -- acá se
+   tocan bastante seguido y con dedo, así que icono + área clicable más generosos ayudan. */
+.recipe-card-actions .btn-icon{font-size:20px;padding:7px 9px}
+
+/* ---------- forms ---------- */
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--text-muted)}
+.form-row input,.form-row select,.form-row textarea{
+  width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:13.5px;font-family:inherit;
+}
+.form-row textarea{resize:vertical}
+.form-row input:focus,.form-row select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.form-row-split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row-3{grid-template-columns:1fr 1fr 1fr}
+.form-hint{font-size:12px;color:var(--text-muted);margin:-8px 0 14px}
+.hora-picker{display:flex;gap:6px}
+.hora-picker select{width:auto;flex:1}
+.field-note{font-size:11px;color:var(--text-muted);margin:4px 0 0}
+
+.ingredient-row select,.ingredient-row input,.costo-row select,.costo-row input{font-size:13px;padding:6px 8px}
+.ingredient-row td,.costo-row td{padding:6px 8px}
+
+/* ---------- summary panel ---------- */
+.summary-panel{
+  background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;
+}
+.summary-item .summary-label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted)}
+.summary-item .summary-value{font-size:17px;font-weight:700;margin-top:2px}
+.summary-item.highlight .summary-value{color:var(--accent)}
+.summary-warning{grid-column:1/-1;font-size:12.5px;color:var(--bad);background:var(--bad-soft);padding:8px 10px;border-radius:8px}
+
+/* ---------- configuración: tema ---------- */
+.tema-opciones{display:flex;gap:8px;flex-wrap:wrap}
+.tema-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- configuración: fondos ---------- */
+.fondos-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.fondo-tile{
+  position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;
+  border:2px solid var(--border);cursor:pointer;background:var(--surface-alt);
+}
+.fondo-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.fondo-tile.activo{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.fondo-tile-check{
+  position:absolute;bottom:2px;left:2px;background:var(--accent);color:#fff;
+  border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center;
+}
+.fondo-tile-del{
+  position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;
+  border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:18px;
+  text-align:center;cursor:pointer;padding:0;
+}
+.fondo-tile-del:hover{background:var(--bad)}
+.fondo-tile-ninguno{display:flex;align-items:center;justify-content:center;text-align:center}
+.fondo-tile-ninguno-label{font-size:10.5px;color:var(--text-muted);padding:0 4px}
+.fondos-acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ---------- foto picker ---------- */
+.foto-picker{display:flex;align-items:center;gap:10px}
+.foto-preview{
+  width:56px;height:56px;border-radius:8px;overflow:hidden;flex-shrink:0;
+  background:var(--surface-alt);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+}
+.foto-preview img{width:100%;height:100%;object-fit:cover}
+.foto-placeholder{font-size:10px;color:var(--text-muted);text-align:center}
+.foto-picker-actions{display:flex;flex-direction:column;gap:4px}
+.detail-photo{width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px}
+
+.ajustar-foto-marco{
+  position:relative;width:100%;aspect-ratio:4/3;border-radius:8px;overflow:hidden;
+  background-color:var(--surface-alt);border:1px solid var(--border);
+  background-repeat:no-repeat;cursor:grab;touch-action:none;user-select:none;
+}
+.ajustar-foto-marco.arrastrando{cursor:grabbing}
+
+/* ---------- modal ---------- */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(20,15,10,.45);display:flex;
+  /* "safe center": centra verticalmente los modales cortos (la mayoría); si un modal es más
+     alto que la ventana (ej. el de Pedido con varios platos), cae a alineación arriba en vez
+     de recortarse -- evita el problema clásico de flexbox donde un ítem centrado más alto que
+     su contenedor no se puede scrollear hasta el principio. */
+  align-items:safe center;justify-content:center;padding:40px 32px;z-index:100;overflow:auto;
+}
+.modal-backdrop[hidden]{display:none}
+.modal{
+  background:var(--surface);border-radius:14px;width:100%;max-width:520px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.modal-lg{max-width:740px}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+}
+.modal-header h2{margin:0;font-size:16.5px}
+.modal form{padding:18px 20px}
+.ayuda-contenido{padding:4px 20px 18px;max-height:65vh;overflow-y:auto;font-size:13.5px;line-height:1.6;color:var(--text)}
+.ayuda-contenido h4{margin:16px 0 4px;font-size:13.5px;color:var(--accent)}
+.ayuda-contenido h4:first-child{margin-top:0}
+.ayuda-contenido p{margin:0 0 8px}
+.ayuda-contenido ul{margin:2px 0 10px;padding-left:20px}
+.ayuda-contenido li{margin-bottom:4px}
+.modal-footer{
+  display:flex;justify-content:flex-end;gap:10px;padding-top:6px;
+}
+
+/* ---------- detail view ---------- */
+.detail-section{margin-bottom:16px}
+.detail-section h4{margin:0 0 8px;font-size:14.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted)}
+#detalleContenido{padding:0 20px}
+.detail-section-header{
+  display:flex;align-items:center;justify-content:flex-start;gap:8px;cursor:pointer;
+  margin:0 0 8px;user-select:none;
+}
+.detail-section-header .chevron{
+  flex:none;display:inline-block;width:8px;height:8px;
+  border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);
+  transform:rotate(45deg);transform-origin:50% 50%;transition:transform .15s;
+}
+.detail-section.colapsado .chevron{transform:rotate(225deg)}
+.detail-section.colapsado .detail-section-body{display:none}
+.detail-texto{font-size:13.5px;line-height:1.6;white-space:pre-wrap;color:var(--text)}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--bg);padding:10px 18px;border-radius:8px;
+  font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:200;
+}
+.toast[hidden]{display:none}
+
+/* ---------- cuenta / avatar ---------- */
+.cuenta-icono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.btn-avatar{
+  width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface-alt);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;overflow:hidden;font-size:22px;flex:0 0 auto;
+}
+.btn-avatar:hover{border-color:var(--accent)}
+.avatar-icono{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.avatar-icono img{width:100%;height:100%;object-fit:cover}
+.avatar-etiqueta{
+  font-size:10.5px;color:var(--text-muted);max-width:76px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-align:center;
+}
+.cuenta-opcion-danger{color:var(--bad);border-color:var(--bad-soft)}
+.cuenta-seccion-titulo{
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted);
+  margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border);
+}
+.cuenta-seccion-titulo:first-child{margin-top:4px;padding-top:0;border-top:none}
+.foto-preview-circular{width:72px;height:72px;border-radius:50%}
+
+/* ---------- calendario ---------- */
+.calendario-toolbar{align-items:center;justify-content:space-between}
+.calendario-nav{display:flex;gap:8px;align-items:center}
+.calendario-titulo{margin:0;font-size:17px;font-weight:700;text-transform:capitalize}
+.calendario-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:12px;
+}
+.calendario-dia-nombre{
+  text-align:center;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;
+  color:var(--text-muted);padding-bottom:4px;
+}
+.calendario-dia{
+  position:relative;min-height:96px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px;
+  box-shadow:var(--shadow);
+}
+.calendario-dia:hover{border-color:var(--accent)}
+.calendario-dia.otro-mes{opacity:.45}
+.calendario-dia.hoy{border-color:var(--accent);border-width:2px}
+.calendario-dia-numero{font-size:13px;font-weight:700;color:var(--text)}
+.calendario-dia-eventos{display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.calendario-badge-evento{
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;
+}
+.calendario-dia-pedidos{
+  position:absolute;top:6px;right:6px;min-width:18px;height:18px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent-dark);font-size:10.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;
+}
+
+@media (max-width:640px){
+  .form-row-split,.form-row-3{grid-template-columns:1fr}
+  main{padding:16px}
+}
