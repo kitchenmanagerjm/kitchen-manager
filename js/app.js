@@ -201,14 +201,17 @@
   // Un solo listener delegado en document, en vez de tocar cada <input>/<textarea> uno por uno --
   // así también cubre campos que se crean dinámicamente (filas de pedido, etc.) sin cablear nada
   // extra. Se excluyen los buscadores (type="search", no tiene sentido "corregir" lo que se está
-  // filtrando) y los campos que ya fuerzan TODO en mayúscula (.input-mayusculas -- ahí ponerle
-  // mayúscula solo a la primera letra sería redundante, el submit ya hace .toUpperCase() completo).
+  // filtrando), los campos que ya fuerzan TODO en mayúscula (.input-mayusculas -- ahí ponerle
+  // mayúscula solo a la primera letra sería redundante, el submit ya hace .toUpperCase() completo),
+  // y los campos donde "corregir" mayúsculas es directamente indeseado (.sin-auto-mayuscula --
+  // ej. el login, que acepta un nickname o email y donde puede importar la capitalización exacta).
   document.addEventListener('input', e => {
     const el = e.target;
     const esTextarea = el.tagName === 'TEXTAREA';
     const esInputTexto = el.tagName === 'INPUT' && el.type === 'text';
     if (!esTextarea && !esInputTexto) return;
     if (el.classList.contains('input-mayusculas')) return;
+    if (el.classList.contains('sin-auto-mayuscula')) return;
     const v = el.value;
     if (!v) return;
     const primera = v.charAt(0);
