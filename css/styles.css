@@ -102,6 +102,18 @@ body.auth-bloqueado{overflow:hidden}
 .auth-logo h1{margin:0;font-size:18px;font-weight:700;text-align:center;color:var(--text)}
 .auth-label{font-size:12.5px;font-weight:600;color:var(--text-muted)}
 .auth-box input{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13.5px}
+
+/* Botón de "mostrar/ocultar contraseña" (👁/🙈) -- mismo componente reutilizado en Login,
+   Recuperar contraseña y Mi cuenta. El input queda con padding-right extra para que el texto
+   nunca quede debajo del ícono. */
+.password-field{position:relative;display:flex}
+.password-field input{flex:1;padding-right:38px!important;width:100%}
+.btn-toggle-password{
+  position:absolute;right:2px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:16px;line-height:1;
+  padding:6px 8px;color:var(--text-muted);
+}
+.btn-toggle-password:hover{color:var(--text)}
 .auth-error{color:var(--bad);font-size:12.5px;margin:0}
 .auth-btn{margin-top:8px;width:100%;justify-content:center}
 /* .auth-box ya no es el <form> en sí (ahora contiene 3: login, solicitar código, restablecer
@@ -277,6 +289,32 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover{background:var(--surface-alt)}
 .col-actions{text-align:right;width:1%;white-space:nowrap}
+
+/* Insumos/Clientes: con table-layout:auto (por defecto) + width:100%, el navegador reparte
+   el ancho sobrante entre TODAS las columnas -- con columnas de valores cortos (categoría,
+   unidad, precio, teléfono, etc.) eso se veía como espacios enormes entre columnas. Se le da
+   un ancho fijo a CADA columna (incluida Nombre) y se quita el width:100% -- así la tabla
+   queda exactamente del ancho que necesita su contenido, sin que ninguna columna "estire" de
+   más; si el contenedor es más ancho que la tabla, el sobrante queda como fondo vacío después
+   de la tabla, no como huecos entre columnas. */
+#tablaInsumos{table-layout:fixed;width:980px}
+#tablaInsumos th:nth-child(1){width:260px}
+#tablaInsumos th:nth-child(2){width:170px}
+#tablaInsumos th:nth-child(3){width:130px}
+#tablaInsumos th:nth-child(4){width:90px}
+#tablaInsumos th:nth-child(5){width:80px}
+#tablaInsumos th:nth-child(6){width:150px}
+#tablaInsumos th:nth-child(7){width:100px}
+
+#tablaClientes{table-layout:fixed;width:1200px}
+#tablaClientes th:nth-child(1){width:180px}
+#tablaClientes th:nth-child(2){width:100px}
+#tablaClientes th:nth-child(3){width:260px}
+#tablaClientes th:nth-child(4){width:180px}
+#tablaClientes th:nth-child(5){width:90px}
+#tablaClientes th:nth-child(6){width:140px}
+#tablaClientes th:nth-child(7){width:150px}
+#tablaClientes th:nth-child(8){width:100px}
 .text-right{text-align:right}
 .text-center{text-align:center}
 .empty-state{padding:30px;text-align:center;color:var(--text-muted);font-size:13.5px}

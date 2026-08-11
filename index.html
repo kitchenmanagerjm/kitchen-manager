@@ -34,7 +34,10 @@
       <label class="auth-label" for="loginEmail">Correo o nombre de usuario</label>
       <input type="text" id="loginEmail" class="sin-auto-mayuscula" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
       <label class="auth-label" for="loginPassword">Contraseña</label>
-      <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <div class="password-field">
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <button type="button" class="btn-toggle-password" data-toggle-password="loginPassword" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+      </div>
       <p class="auth-error" id="loginError" hidden></p>
       <button type="submit" class="btn btn-primary auth-btn" id="btnLogin">Ingresar</button>
       <button type="button" class="auth-link" id="btnOlvideContrasena">¿Olvidaste tu contraseña?</button>
@@ -57,9 +60,15 @@
       <label class="auth-label" for="recuperarCodigo">Código de 6 dígitos</label>
       <input type="text" id="recuperarCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
       <label class="auth-label" for="recuperarNuevaPassword">Nueva contraseña</label>
-      <input type="password" id="recuperarNuevaPassword" autocomplete="new-password" required>
+      <div class="password-field">
+        <input type="password" id="recuperarNuevaPassword" autocomplete="new-password" required>
+        <button type="button" class="btn-toggle-password" data-toggle-password="recuperarNuevaPassword" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+      </div>
       <label class="auth-label" for="recuperarConfirmarPassword">Confirmar nueva contraseña</label>
-      <input type="password" id="recuperarConfirmarPassword" autocomplete="new-password" required>
+      <div class="password-field">
+        <input type="password" id="recuperarConfirmarPassword" autocomplete="new-password" required>
+        <button type="button" class="btn-toggle-password" data-toggle-password="recuperarConfirmarPassword" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+      </div>
       <p class="auth-error" id="recuperarCodigoError" hidden></p>
       <button type="submit" class="btn btn-primary auth-btn" id="btnRestablecerPassword">Restablecer contraseña</button>
       <p class="auth-info">¿No recibiste el código? Contacta al administrador del sistema.</p>
@@ -942,8 +951,8 @@
         <textarea id="jornadaNotas" rows="2" placeholder="Ej: detalles del evento, cliente, ubicación..."></textarea>
       </div>
       <div class="form-row">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="jornadaIncluirEnAnalisis" checked style="width:auto">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px">
+          <input type="checkbox" id="jornadaIncluirEnAnalisis" checked style="width:20px;height:20px">
           Incluir en el Reporte de Rentabilidad
         </label>
         <p class="field-note">Desmárcalo para Jornadas que no reflejan el comportamiento habitual del negocio (ej. un evento benéfico) -- sus pedidos se excluyen del análisis de tendencias/márgenes, pero siguen apareciendo normal en Jornadas, Finanzas y Clientes.</p>
@@ -1242,11 +1251,17 @@
         <div class="form-row form-row-split">
           <div>
             <label>Nueva contraseña</label>
-            <input type="password" id="cuentaNuevaPassword" autocomplete="new-password" placeholder="Deja vacío para no cambiarla">
+            <div class="password-field">
+              <input type="password" id="cuentaNuevaPassword" autocomplete="new-password" placeholder="Deja vacío para no cambiarla">
+              <button type="button" class="btn-toggle-password" data-toggle-password="cuentaNuevaPassword" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+            </div>
           </div>
           <div>
             <label>Confirmar nueva contraseña</label>
-            <input type="password" id="cuentaConfirmarPassword" autocomplete="new-password">
+            <div class="password-field">
+              <input type="password" id="cuentaConfirmarPassword" autocomplete="new-password">
+              <button type="button" class="btn-toggle-password" data-toggle-password="cuentaConfirmarPassword" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+            </div>
           </div>
         </div>
       </div>

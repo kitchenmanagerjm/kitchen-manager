@@ -223,6 +223,23 @@
     if (inicio !== null) el.setSelectionRange(inicio, fin);
   });
 
+  // ---------------- mostrar/ocultar contraseña (👁/🙈) ----------------
+  // Un solo listener delegado en document (mismo patrón que la mayúscula automática arriba) --
+  // cubre los 3 lugares con campos de contraseña (Login, Recuperar contraseña, Mi cuenta) sin
+  // tener que cablear cada botón por separado. data-toggle-password="idDelInput" identifica
+  // cuál campo alternar.
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-toggle-password]');
+    if (!btn) return;
+    const input = document.getElementById(btn.getAttribute('data-toggle-password'));
+    if (!input) return;
+    const estabaOculta = input.type === 'password';
+    input.type = estabaOculta ? 'text' : 'password';
+    btn.textContent = estabaOculta ? '🙈' : '👁';
+    btn.title = estabaOculta ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    btn.setAttribute('aria-label', btn.title);
+  });
+
   // ---------------- toast ----------------
   const toastEl = document.getElementById('toast');
   let toastTimer = null;
@@ -3963,17 +3980,26 @@
   }
   document.getElementById('pedidoJornada').addEventListener('change', actualizarResumenPlanJornadaPedido);
 
-  // Venta de mostrador: el selector de Jornada se filtra por la fecha de entrega actual del
-  // formulario (no lista todos los Eventos como un pedido normal). Al crear, la fecha está
-  // bloqueada = hoy, así que esto no se dispara (el campo no se puede tocar). Al editar, si el
-  // usuario cambia la fecha a mano, la lista de Eventos se refresca para esa nueva fecha.
+  // El selector de Jornada se recalcula cada vez que cambia "Fecha de entrega":
+  // - Venta de mostrador: se filtra a solo los Eventos de esa fecha puntual (no lista todos los
+  //   Eventos como un pedido normal). Al crear, la fecha está bloqueada = hoy, así que esto no se
+  //   dispara (el campo no se puede tocar); al editar, si el usuario cambia la fecha a mano, la
+  //   lista se refresca para esa nueva fecha.
+  // - Pedido normal: se recalcula con jornadaOptionsHTMLEventosVigentes (oculta Eventos pasados
+  //   salvo que coincidan con la nueva fecha). En la práctica solo importa mientras el selector
+  //   sigue en "Día normal", porque elegir un Evento bloquea este campo (actualizarBloqueoFechaPedido).
   document.getElementById('pedidoFecha').addEventListener('change', () => {
-    if (!pedidoEsMostradorActual) return;
     const selectJornada = document.getElementById('pedidoJornada');
     const seleccionActual = selectJornada.value;
     const nuevaFecha = document.getElementById('pedidoFecha').value;
-    const sigueValida = seleccionActual && jornadas.some(j => j.id === seleccionActual && j.tipo === 'evento' && j.fecha === nuevaFecha);
-    selectJornada.innerHTML = jornadaOptionsHTMLEventosDelDia(nuevaFecha, sigueValida ? seleccionActual : null);
+    if (pedidoEsMostradorActual) {
+      const sigueValida = seleccionActual && jornadas.some(j => j.id === seleccionActual && j.tipo === 'evento' && j.fecha === nuevaFecha);
+      selectJornada.innerHTML = jornadaOptionsHTMLEventosDelDia(nuevaFecha, sigueValida ? seleccionActual : null);
+    } else {
+      const hoy = new Date().toISOString().slice(0, 10);
+      const sigueValida = seleccionActual && jornadas.some(j => j.id === seleccionActual && j.tipo === 'evento' && (j.fecha >= hoy || j.fecha === nuevaFecha));
+      selectJornada.innerHTML = jornadaOptionsHTMLEventosVigentes(nuevaFecha, sigueValida ? seleccionActual : null);
+    }
     actualizarResumenPlanJornadaPedido();
   });
 
@@ -4021,7 +4047,7 @@
       // Venta de mostrador: solo eventos de esta fecha puntual; pedido normal: todos.
       document.getElementById('pedidoJornada').innerHTML = pedidoEsMostradorActual
         ? jornadaOptionsHTMLEventosDelDia(p.fechaEntrega, eventoSeleccionado)
-        : jornadaOptionsHTMLEventos(eventoSeleccionado);
+        : jornadaOptionsHTMLEventosVigentes(p.fechaEntrega, eventoSeleccionado);
       p.items.forEach(item => addPedidoItemRow(item));
     } else {
       document.getElementById('modalPedidoTitulo').textContent = esMostrador ? 'Venta de mostrador' : 'Nuevo pedido';
@@ -4052,7 +4078,7 @@
       pedidoCanceladoActual = false;
       document.getElementById('pedidoJornada').innerHTML = esMostrador
         ? jornadaOptionsHTMLEventosDelDia(fechaMostrador, null)
-        : jornadaOptionsHTMLEventos(null);
+        : jornadaOptionsHTMLEventosVigentes(document.getElementById('pedidoFecha').value, null);
       addPedidoItemRow(null);
     }
     document.getElementById('labelPedidoCliente').textContent = pedidoEsMostradorActual ? 'Cliente (opcional)' : 'Cliente *';
@@ -4978,14 +5004,19 @@
     ).join('');
   }
 
-  // Selector de Jornada del formulario de Pedido (Jornada híbrida): lista TODOS los eventos
-  // (no filtrados por fecha, a diferencia de antes) -- elegir uno autocompleta y bloquea
-  // fecha_entrega con la fecha de ese evento (ver actualizarBloqueoFechaPedido). El día normal
-  // se resuelve solo (ver resolverOCrearJornadaVentaRegular) cuando el selector queda en el
-  // placeholder.
-  function jornadaOptionsHTMLEventos(selectedId) {
+  // Selector de Jornada del formulario de Pedido (Jornada híbrida): elegir un evento autocompleta
+  // y bloquea fecha_entrega con la fecha de ese evento (ver actualizarBloqueoFechaPedido). El día
+  // normal se resuelve solo (ver resolverOCrearJornadaVentaRegular) cuando el selector queda en el
+  // placeholder. Oculta Eventos ya PASADOS (respecto a hoy) para no llenar la lista de historial
+  // viejo -- salvo que su fecha coincida con la Fecha de entrega actual del formulario (por si se
+  // está registrando a propósito un pedido atrasado de un Evento puntual). Los eventos futuros
+  // nunca se ocultan, así siempre se pueden elegir por nombre sin importar qué fecha haya en el
+  // formulario en ese momento; se recalcula cada vez que cambia "Fecha de entrega" (ver el
+  // listener de pedidoFecha más abajo).
+  function jornadaOptionsHTMLEventosVigentes(fechaFormulario, selectedId) {
+    const hoy = new Date().toISOString().slice(0, 10);
     const eventos = jornadas
-      .filter(j => j.tipo === 'evento')
+      .filter(j => j.tipo === 'evento' && (j.fecha >= hoy || j.fecha === fechaFormulario))
       .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
     return '<option value="">— Día normal (automático) —</option>' + eventos.map(j =>
       `<option value="${j.id}" ${j.id === selectedId ? 'selected' : ''}>${esc(j.nombre)} (${fecha(j.fecha)})</option>`
