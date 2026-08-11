@@ -7618,11 +7618,11 @@
     // "Merma %" y "Costo efectivo" se agregan AL FINAL (no en medio) para no correr las
     // columnas existentes -- otras fórmulas de este archivo referencian columnas de esta hoja
     // por letra fija (ver insumoRowMap más abajo).
-    const insumosAOA = [['Nombre', 'Categoría', 'Unidad', 'Precio', 'Proveedor', 'Actualizado', 'Merma %', 'Costo efectivo']];
+    const insumosAOA = [['Nombre', 'Categoría', 'Unidad', 'Precio', 'Proveedor', 'Actualizado', 'Merma %', 'Costo efectivo', 'ID']];
     insumosOrdenados.forEach((i, idx) => {
       insumosAOA.push([
         i.nombre, i.categoria || '', UNITS[i.unidad] ? UNITS[i.unidad].label : (i.unidad || ''), i.precio || 0, i.proveedor || '', i.actualizado || '',
-        i.mermaPct || 0, costoEfectivoInsumo(i),
+        i.mermaPct || 0, costoEfectivoInsumo(i), i.id,
       ]);
       insumoRowMap.set(i.id, idx + 2);
     });
@@ -7630,9 +7630,9 @@
 
     // ---------- Ingredientes / OtrosCostos / Recetas ----------
     const recetasOrdenadas = recetas.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const ingAOA = [['Receta', 'Insumo', 'Cantidad usada', 'Unidad usada', 'Factor unidad usada→base', 'Costo efectivo insumo (por unidad de compra, ya con merma)', 'Factor unidad insumo→base', 'Costo']];
-    const costAOA = [['Receta', 'Concepto', 'Cantidad', 'Precio unitario', 'Costo']];
-    const recetasAOA = [['Nombre', 'Categoría', 'Porciones', 'Costo ingredientes', 'Otros costos', 'Costo total', 'Costo por plato', 'Margen deseado (%)', 'Precio sugerido', 'Precio de venta (manual)', 'Precio de referencia', 'Utilidad por plato', 'Margen real (%)']];
+    const ingAOA = [['Receta', 'Insumo', 'Cantidad usada', 'Unidad usada', 'Factor unidad usada→base', 'Costo efectivo insumo (por unidad de compra, ya con merma)', 'Factor unidad insumo→base', 'Costo', 'ID Receta', 'ID Insumo']];
+    const costAOA = [['Receta', 'Concepto', 'Cantidad', 'Precio unitario', 'Costo', 'ID Receta']];
+    const recetasAOA = [['Nombre', 'Categoría', 'Porciones', 'Costo ingredientes', 'Otros costos', 'Costo total', 'Costo por plato', 'Margen deseado (%)', 'Precio sugerido', 'Precio de venta (manual)', 'Precio de referencia', 'Utilidad por plato', 'Margen real (%)', 'ID']];
     const ingFormulas = [];
     const costFormulas = [];
     const recetasFormulas = [];
@@ -7653,6 +7653,7 @@
           r.nombre, (d.nombre || '') + nota, ing.cantidad || 0,
           uUso ? uUso.label : (ing.unidad || ''), uUso ? uUso.factor : 0,
           insumo ? costoEfectivoInsumo(insumo) : 0, uIns ? uIns.factor : 0, d.costo,
+          r.id, insumo ? insumo.id : '',
         ]);
         if (insumo && insumoRowMap.has(insumo.id)) {
           // columna H de la hoja Insumos = "Costo efectivo" (ya incluye la merma) -- no la D
@@ -7666,7 +7667,7 @@
       const costStart = costRow + 1;
       (c.costosAdicionales || []).forEach(cc => {
         costRow++;
-        costAOA.push([r.nombre, cc.concepto || '(sin nombre)', cc.cantidad || 0, cc.precioUnitario || 0, cc.costo]);
+        costAOA.push([r.nombre, cc.concepto || '(sin nombre)', cc.cantidad || 0, cc.precioUnitario || 0, cc.costo, r.id]);
         costFormulas.push({ r: costRow - 1, c: 4, f: `C${costRow}*D${costRow}` });
       });
       const costEnd = costRow;
@@ -7675,6 +7676,7 @@
         r.nombre, r.categoria || '', r.porciones || 1,
         c.costoIngredientes, c.totalCostosAdicionales, c.costoTotal, c.costoPorPlato,
         r.margenPct || 0, c.precioSugerido, r.precioVenta || '', c.precioReferencia, c.utilidadPorPlato, c.margenReal,
+        r.id,
       ]);
       const rIdx = recetasAOA.length - 2; // fila 0-indexada de esta receta dentro del AOA (sin contar encabezado)
       const excelRow = rIdx + 2;
@@ -7694,8 +7696,8 @@
 
     // ---------- PedidoItems / Pedidos ----------
     const pedidosOrdenados = pedidos.slice().sort((a, b) => `${a.fechaEntrega}${a.horaEntrega}`.localeCompare(`${b.fechaEntrega}${b.horaEntrega}`));
-    const itemsAOA = [['Pedido', 'Cliente', 'Plato', 'Cantidad', 'Precio unitario (congelado)', 'Subtotal']];
-    const pedidosAOA = [['N°', 'Cliente', 'Teléfono', 'Entrega', 'Jornada', 'Total', 'Pagado', 'Cancelado', 'Preparación', 'Notas', 'Total platos']];
+    const itemsAOA = [['Pedido', 'Cliente', 'Plato', 'Cantidad', 'Precio unitario (congelado)', 'Subtotal', 'ID Pedido', 'ID Receta']];
+    const pedidosAOA = [['N°', 'Cliente', 'Teléfono', 'Entrega', 'Jornada', 'Total', 'Pagado', 'Cancelado', 'Preparación', 'Notas', 'Total platos', 'ID']];
     const itemsFormulas = [];
     const pedidosFormulas = [];
     let itemRow = 1;
@@ -7706,7 +7708,7 @@
       const start = itemRow + 1;
       c.items.forEach(it => {
         itemRow++;
-        itemsAOA.push([p.numeroPedido ? '#' + p.numeroPedido : '', cliente.nombre, it.nombre, it.cantidad || 0, it.precioUnitario, it.subtotal]);
+        itemsAOA.push([p.numeroPedido ? '#' + p.numeroPedido : '', cliente.nombre, it.nombre, it.cantidad || 0, it.precioUnitario, it.subtotal, p.id, it.recetaId || '']);
         itemsFormulas.push({ r: itemRow - 1, c: 5, f: `D${itemRow}*E${itemRow}` });
       });
       const end = itemRow;
@@ -7714,6 +7716,7 @@
         p.numeroPedido || '', cliente.nombre, cliente.telefono || '', fechaHoraEntrega(p),
         p.jornadaId ? (nombreJornada(p.jornadaId) || '') : '',
         c.total, !!p.pagado, !!p.cancelado, PREPARACION_LABEL[p.estadoPreparacion || 'sin_accion'], p.notas || '', c.totalPlatos,
+        p.id,
       ]);
       const rIdx = pedidosAOA.length - 2;
       const excelRow = rIdx + 2;
@@ -7728,11 +7731,11 @@
 
     // ---------- Clientes ----------
     const clientesOrdenados = clientes.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const clientesAOA = [['Nombre', 'Teléfono', 'Dirección', 'Notas', 'N° pedidos', 'Total platos', 'Total acumulado']];
+    const clientesAOA = [['Nombre', 'Teléfono', 'Dirección', 'Notas', 'N° pedidos', 'Total platos', 'Total acumulado', 'ID']];
     const clientesFormulas = [];
     clientesOrdenados.forEach((cl, idx) => {
       const r = resumenComprasCliente(cl.id);
-      clientesAOA.push([cl.nombre, cl.telefono || '', cl.direccion || '', cl.notas || '', r.numPedidos, r.totalPlatos, r.totalAcumulado]);
+      clientesAOA.push([cl.nombre, cl.telefono || '', cl.direccion || '', cl.notas || '', r.numPedidos, r.totalPlatos, r.totalAcumulado, cl.id]);
       const excelRow = idx + 2;
       clientesFormulas.push({ r: idx + 1, c: 4, f: `COUNTIF(Pedidos!B:B,A${excelRow})` });
       clientesFormulas.push({ r: idx + 1, c: 5, f: `SUMIF(Pedidos!B:B,A${excelRow},Pedidos!K:K)` });
@@ -7742,11 +7745,11 @@
 
     // ---------- Jornadas ----------
     const jornadasOrdenadas = jornadas.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-    const jornadasAOA = [['Nombre', 'Tipo', 'Fecha', 'Ingreso manual', 'Ingreso pedidos', 'Ingreso total', 'Gasto total', 'Utilidad']];
+    const jornadasAOA = [['Nombre', 'Tipo', 'Fecha', 'Ingreso manual', 'Ingreso pedidos', 'Ingreso total', 'Gasto total', 'Utilidad', 'ID']];
     const jornadasFormulas = [];
     jornadasOrdenadas.forEach((j, idx) => {
       const c = calcJornada(j);
-      jornadasAOA.push([j.nombre, j.tipo === 'evento' ? 'Evento / catering' : 'Venta regular', j.fecha || '', j.ingresoManual || 0, c.ingresoPedidos, c.ingresoTotal, c.gastoTotal, c.utilidad]);
+      jornadasAOA.push([j.nombre, j.tipo === 'evento' ? 'Evento / catering' : 'Venta regular', j.fecha || '', j.ingresoManual || 0, c.ingresoPedidos, c.ingresoTotal, c.gastoTotal, c.utilidad, j.id]);
       const excelRow = idx + 2;
       jornadasFormulas.push({ r: idx + 1, c: 4, f: `SUMIFS(Pedidos!F:F,Pedidos!E:E,A${excelRow},Pedidos!G:G,TRUE,Pedidos!H:H,FALSE)` });
       jornadasFormulas.push({ r: idx + 1, c: 5, f: `D${excelRow}+E${excelRow}` });
@@ -7757,19 +7760,19 @@
 
     // ---------- Gastos ----------
     const gastosOrdenados = gastos.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-    const gastosAOA = [['Fecha', 'Categoría', 'Concepto', 'Jornada', 'Monto']];
+    const gastosAOA = [['Fecha', 'Categoría', 'Concepto', 'Jornada', 'Monto', 'ID']];
     gastosOrdenados.forEach(g => {
-      gastosAOA.push([g.fecha || '', g.categoria || '', g.concepto || '', g.jornadaId ? (nombreJornada(g.jornadaId) || '') : '', g.monto || 0]);
+      gastosAOA.push([g.fecha || '', g.categoria || '', g.concepto || '', g.jornadaId ? (nombreJornada(g.jornadaId) || '') : '', g.monto || 0, g.id]);
     });
     hojas.push({ nombre: 'Gastos', aoa: gastosAOA, formulas: [] });
 
     // ---------- Capital ----------
     const capitalOrdenados = capitalMovimientos.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-    const capitalAOA = [['Fecha', 'Tipo', 'Nota', 'Monto', 'Monto neto']];
+    const capitalAOA = [['Fecha', 'Tipo', 'Nota', 'Monto', 'Monto neto', 'ID']];
     const capitalFormulas = [];
     capitalOrdenados.forEach((m, idx) => {
       const neto = (m.tipo === 'aporte' ? 1 : -1) * (m.monto || 0);
-      capitalAOA.push([m.fecha || '', m.tipo === 'aporte' ? 'Aporte' : 'Retiro', m.nota || '', m.monto || 0, neto]);
+      capitalAOA.push([m.fecha || '', m.tipo === 'aporte' ? 'Aporte' : 'Retiro', m.nota || '', m.monto || 0, neto, m.id]);
       const excelRow = idx + 2;
       capitalFormulas.push({ r: idx + 1, c: 4, f: `IF(B${excelRow}="Aporte",D${excelRow},-D${excelRow})` });
     });
