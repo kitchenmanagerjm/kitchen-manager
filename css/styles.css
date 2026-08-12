@@ -298,13 +298,17 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
    "estirarse" de forma dispareja) pero la tabla ocupa todo el ancho del panel, igual que
    Recetas/Pedidos, en vez de dejar un espacio vacío fijo a la derecha cuando el panel es más
    ancho que los 980px que tenía la tabla antes. */
+/* Insumos -- 2da vuelta: Categoría/Unidad a la mitad de su ancho anterior, Precio/Merma/
+   Actualizado recortadas al ancho que necesita su título o su valor típico (lo que sea mayor),
+   y todo lo liberado se lo lleva Nombre (la única columna con texto de largo variable). Acciones
+   no se tocó. Sigue sumando 100%. */
 #tablaInsumos{table-layout:fixed;width:100%}
-#tablaInsumos th:nth-child(1){width:26.53%}
-#tablaInsumos th:nth-child(2){width:17.35%}
-#tablaInsumos th:nth-child(3){width:13.27%}
-#tablaInsumos th:nth-child(4){width:9.18%}
-#tablaInsumos th:nth-child(5){width:8.16%}
-#tablaInsumos th:nth-child(6){width:15.31%}
+#tablaInsumos th:nth-child(1){width:42.87%}
+#tablaInsumos th:nth-child(2){width:8.67%}
+#tablaInsumos th:nth-child(3){width:6.63%}
+#tablaInsumos th:nth-child(4){width:8.67%}
+#tablaInsumos th:nth-child(5){width:8.67%}
+#tablaInsumos th:nth-child(6){width:14.29%}
 #tablaInsumos th:nth-child(7){width:10.20%}
 
 #tablaClientes{table-layout:fixed;width:100%}
