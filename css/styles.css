@@ -298,27 +298,37 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
    "estirarse" de forma dispareja) pero la tabla ocupa todo el ancho del panel, igual que
    Recetas/Pedidos, en vez de dejar un espacio vacío fijo a la derecha cuando el panel es más
    ancho que los 980px que tenía la tabla antes. */
-/* Insumos -- 2da vuelta: Categoría/Unidad a la mitad de su ancho anterior, Precio/Merma/
-   Actualizado recortadas al ancho que necesita su título o su valor típico (lo que sea mayor),
-   y todo lo liberado se lo lleva Nombre (la única columna con texto de largo variable). Acciones
-   no se tocó. Sigue sumando 100%. */
+/* Insumos -- 3ra vuelta: Categoría/Unidad medidas con el ancho REAL minimo de su valor mas
+   largo (ver measure-natural.js: celda real de .data-table en table-layout:auto, para que el
+   navegador la encoja a su contenido de una sola linea -- no una fraccion arbitraria del ancho
+   anterior), asi "Condimentos y especias"/"kg (kilogramo)" nunca envuelven. Nombre se reduce a
+   la mitad de su valor de la vuelta anterior (42.87% -> 21.44%) y Acciones se ajusta al ancho
+   real de sus 3 botones-icono (tambien medido en DOM real, sin el hack width:1% de
+   .col-actions que en table-layout:auto con una sola columna dispara un ancho absurdo). Con
+   Nombre y Acciones mas chicos, el excedente matematico que sobra para llegar a 100% se lo
+   reparten Categoría/Unidad (destino que se pidio explicitamente) por encima de su minimo, en
+   vez de recaer en Precio/Merma/Actualizado (que ya estaban bien y no se tocan). */
 #tablaInsumos{table-layout:fixed;width:100%}
-#tablaInsumos th:nth-child(1){width:42.87%}
-#tablaInsumos th:nth-child(2){width:8.67%}
-#tablaInsumos th:nth-child(3){width:6.63%}
+#tablaInsumos th:nth-child(1){width:21.44%}
+#tablaInsumos th:nth-child(2){width:22.93%}
+#tablaInsumos th:nth-child(3){width:15.51%}
 #tablaInsumos th:nth-child(4){width:8.67%}
 #tablaInsumos th:nth-child(5){width:8.67%}
 #tablaInsumos th:nth-child(6){width:14.29%}
-#tablaInsumos th:nth-child(7){width:10.20%}
+#tablaInsumos th:nth-child(7){width:8.49%}
 
+/* Pedidos/Platos pedidos/Total acumulado: valores cortos (1-3 cifras / montos en Bs), medidas
+   al ancho REAL minimo de su titulo o su valor mas largo (measure-natural.js, DOM real en
+   table-layout:auto). El espacio liberado se lo lleva Nombre, la unica con texto de largo
+   variable en esta tabla. */
 #tablaClientes{table-layout:fixed;width:100%}
-#tablaClientes th:nth-child(1){width:15.00%}
+#tablaClientes th:nth-child(1){width:19.04%}
 #tablaClientes th:nth-child(2){width:8.33%}
 #tablaClientes th:nth-child(3){width:21.67%}
 #tablaClientes th:nth-child(4){width:15.00%}
-#tablaClientes th:nth-child(5){width:7.50%}
-#tablaClientes th:nth-child(6){width:11.67%}
-#tablaClientes th:nth-child(7){width:12.50%}
+#tablaClientes th:nth-child(5){width:5.83%}
+#tablaClientes th:nth-child(6){width:10.22%}
+#tablaClientes th:nth-child(7){width:11.58%}
 #tablaClientes th:nth-child(8){width:8.33%}
 .text-right{text-align:right}
 .text-center{text-align:center}
