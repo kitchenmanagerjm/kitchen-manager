@@ -305,18 +305,51 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
   text-align:left;
 }
 
-/* handle de resize de columnas (Insumos/Clientes, ver initResizableColumns en app.js) --
-   posicionado a caballo entre esta columna y la siguiente (mitad y mitad) para que el area de
-   agarre sea comoda sin robarle espacio de click al th (que en varias columnas ordena al
-   hacer click). white-space:nowrap del th ya evita que el handle empuje el texto. */
+/* handle de resize de columnas (ver initResizableColumns en app.js) -- pegado adentro del
+   borde derecho del th (no a caballo/afuera como antes: los th de tablas en modo 'percent'
+   ahora llevan overflow:hidden para el recorte con "..." de mas abajo, y un handle que
+   sobresaliera del th quedaria cortado por ese overflow). white-space:nowrap del th ya evita
+   que el handle empuje el texto. */
 .col-resizable{position:relative}
 .col-resize-handle{
-  position:absolute;top:0;right:-4px;width:8px;height:100%;
+  position:absolute;top:0;right:0;width:8px;height:100%;
   cursor:col-resize;user-select:none;z-index:2;
 }
 .col-resize-handle:hover, body.resizing-cols .col-resize-handle{background:var(--accent-soft)}
 body.resizing-cols{cursor:col-resize;user-select:none}
 body.resizing-cols *{cursor:col-resize !important}
+
+/* Insumos/Clientes/Gastos/Capital/Rentabilidad/Compras (modo 'percent' de columnas
+   redimensionables): si el contenido no entra en el ancho que le dejaron, se recorta con "..."
+   -- nunca se superpone con la celda vecina. Pedidos (modo 'pixel' con scroll) queda afuera de
+   esta regla a proposito: ver mas abajo, ahi se prefiere salto de linea al recorte. */
+#tablaInsumos th, #tablaInsumos td,
+#tablaClientes th, #tablaClientes td,
+#tablaGastos th, #tablaGastos td,
+#tablaCapital th, #tablaCapital td,
+#tablaRentabilidad th, #tablaRentabilidad td,
+#tablaCarritoItems th, #tablaCarritoItems td,
+#tablaCarritoConsolidado th, #tablaCarritoConsolidado td{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Pedidos (modo 'pixel' con scroll horizontal): .cell-nowrap/.pedido-platos/.btn-pago fuerzan
+   white-space:nowrap para las demas tablas (Auditoria, PDF, etc.), pero aca es justo lo que
+   causaba el texto superpuesto al achicar una columna -- se pisa Entrega/Jornada/Total contra
+   la celda vecina en vez de hacer salto de linea. Se vuelve a white-space:normal SOLO dentro
+   de #tablaPedidos (mas especifico que la clase sola, le gana) y se fuerza overflow-wrap para
+   que incluso una palabra larga sin espacios pueda partirse -- la fila crece de alto en vez de
+   superponerse o recortarse, que es lo que se quiere ver completo aca (fechas, notas). */
+#tablaPedidos td.cell-nowrap,
+#tablaPedidos td.pedido-platos,
+#tablaPedidos td.col-actions,
+#tablaPedidos .btn-pago{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
 
 /* Insumos/Clientes: con table-layout:auto (por defecto) + width:100%, el navegador reparte
    el ancho sobrante entre TODAS las columnas -- con columnas de valores cortos (categoría,
