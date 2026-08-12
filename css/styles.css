@@ -298,20 +298,17 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
    "estirarse" de forma dispareja) pero la tabla ocupa todo el ancho del panel, igual que
    Recetas/Pedidos, en vez de dejar un espacio vacío fijo a la derecha cuando el panel es más
    ancho que los 980px que tenía la tabla antes. */
-/* Insumos -- 3ra vuelta: Categoría/Unidad medidas con el ancho REAL minimo de su valor mas
-   largo (ver measure-natural.js: celda real de .data-table en table-layout:auto, para que el
-   navegador la encoja a su contenido de una sola linea -- no una fraccion arbitraria del ancho
-   anterior), asi "Condimentos y especias"/"kg (kilogramo)" nunca envuelven. Nombre se reduce a
-   la mitad de su valor de la vuelta anterior (42.87% -> 21.44%) y Acciones se ajusta al ancho
-   real de sus 3 botones-icono (tambien medido en DOM real, sin el hack width:1% de
-   .col-actions que en table-layout:auto con una sola columna dispara un ancho absurdo). Con
-   Nombre y Acciones mas chicos, el excedente matematico que sobra para llegar a 100% se lo
-   reparten Categoría/Unidad (destino que se pidio explicitamente) por encima de su minimo, en
-   vez de recaer en Precio/Merma/Actualizado (que ya estaban bien y no se tocan). */
+/* Insumos -- 4ta vuelta: Categoría/Unidad vuelven a su ancho minimo real sin excedente (el
+   mismo medido en la vuelta anterior: 173px/117px sobre una tabla de ~1390px). Nombre se
+   recalcula con el nombre de insumo mas largo que existe HOY en Supabase (consulta real:
+   "Choclo cambita graneado", 23 caracteres, 185px con la clase .cell-nombre real) mas margen
+   -- ya no la mitad del valor anterior. El excedente que antes absorbian Categoría/Unidad
+   ahora se lo lleva Nombre, como en la 1ra vuelta. Precio/Merma/Actualizado/Acciones no se
+   tocan, ya estaban ajustadas. Sigue sumando 100%. */
 #tablaInsumos{table-layout:fixed;width:100%}
-#tablaInsumos th:nth-child(1){width:21.44%}
-#tablaInsumos th:nth-child(2){width:22.93%}
-#tablaInsumos th:nth-child(3){width:15.51%}
+#tablaInsumos th:nth-child(1){width:39.01%}
+#tablaInsumos th:nth-child(2){width:12.45%}
+#tablaInsumos th:nth-child(3){width:8.42%}
 #tablaInsumos th:nth-child(4){width:8.67%}
 #tablaInsumos th:nth-child(5){width:8.67%}
 #tablaInsumos th:nth-child(6){width:14.29%}
