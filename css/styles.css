@@ -307,15 +307,15 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 #tablaInsumos th:nth-child(6){width:15.31%}
 #tablaInsumos th:nth-child(7){width:10.20%}
 
-#tablaClientes{table-layout:fixed;width:1200px}
-#tablaClientes th:nth-child(1){width:180px}
-#tablaClientes th:nth-child(2){width:100px}
-#tablaClientes th:nth-child(3){width:260px}
-#tablaClientes th:nth-child(4){width:180px}
-#tablaClientes th:nth-child(5){width:90px}
-#tablaClientes th:nth-child(6){width:140px}
-#tablaClientes th:nth-child(7){width:150px}
-#tablaClientes th:nth-child(8){width:100px}
+#tablaClientes{table-layout:fixed;width:100%}
+#tablaClientes th:nth-child(1){width:15.00%}
+#tablaClientes th:nth-child(2){width:8.33%}
+#tablaClientes th:nth-child(3){width:21.67%}
+#tablaClientes th:nth-child(4){width:15.00%}
+#tablaClientes th:nth-child(5){width:7.50%}
+#tablaClientes th:nth-child(6){width:11.67%}
+#tablaClientes th:nth-child(7){width:12.50%}
+#tablaClientes th:nth-child(8){width:8.33%}
 .text-right{text-align:right}
 .text-center{text-align:center}
 .empty-state{padding:30px;text-align:center;color:var(--text-muted);font-size:13.5px}
