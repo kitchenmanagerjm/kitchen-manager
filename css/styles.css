@@ -290,6 +290,19 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 .data-table tbody tr:hover{background:var(--surface-alt)}
 .col-actions{text-align:right;width:1%;white-space:nowrap}
 
+/* handle de resize de columnas (Insumos/Clientes, ver initResizableColumns en app.js) --
+   posicionado a caballo entre esta columna y la siguiente (mitad y mitad) para que el area de
+   agarre sea comoda sin robarle espacio de click al th (que en varias columnas ordena al
+   hacer click). white-space:nowrap del th ya evita que el handle empuje el texto. */
+.col-resizable{position:relative}
+.col-resize-handle{
+  position:absolute;top:0;right:-4px;width:8px;height:100%;
+  cursor:col-resize;user-select:none;z-index:2;
+}
+.col-resize-handle:hover, body.resizing-cols .col-resize-handle{background:var(--accent-soft)}
+body.resizing-cols{cursor:col-resize;user-select:none}
+body.resizing-cols *{cursor:col-resize !important}
+
 /* Insumos/Clientes: con table-layout:auto (por defecto) + width:100%, el navegador reparte
    el ancho sobrante entre TODAS las columnas -- con columnas de valores cortos (categoría,
    unidad, precio, teléfono, etc.) eso se veía como espacios enormes entre columnas. Se le da

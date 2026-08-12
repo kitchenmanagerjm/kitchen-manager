@@ -197,6 +197,87 @@
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // ---------------- columnas de tabla redimensionables (Insumos/Clientes) ----------------
+  // Agrega un "handle" arrastrable en el borde derecho de cada <th> (menos el último, que no
+  // tiene una columna siguiente de la cual robarle/darle ancho) -- igual que Excel: arrastrar
+  // el borde entre dos columnas solo transfiere % entre esas dos, por eso el total de la fila
+  // se mantiene siempre en 100% del panel sin necesidad de redistribuir el resto ni de scroll
+  // horizontal. Los anchos base siguen viniendo de las reglas #tablaX th:nth-child(n) del CSS;
+  // esta función solo los pisa con un style.width inline cuando el usuario arrastra o cuando
+  // hay anchos guardados de una visita anterior (un style inline siempre gana contra una regla
+  // por id+nth-child). "Restablecer anchos" borra ese inline y el localStorage, así vuelve a
+  // mandar el CSS de siempre.
+  function initResizableColumns(table, storageKey) {
+    if (!table) return { restablecerAnchos() {} };
+    const MIN_PX = 36;
+    const ths = Array.from(table.querySelectorAll('thead th'));
+
+    function aplicarAnchosGuardados() {
+      let anchos;
+      try { anchos = JSON.parse(localStorage.getItem(storageKey)); } catch (e) { anchos = null; }
+      if (!Array.isArray(anchos) || anchos.length !== ths.length) return;
+      ths.forEach((th, i) => { th.style.width = anchos[i] + '%'; });
+    }
+
+    function guardarAnchos() {
+      const totalPx = ths.reduce((s, th) => s + th.getBoundingClientRect().width, 0);
+      if (!totalPx) return;
+      const anchos = ths.map(th => +(th.getBoundingClientRect().width / totalPx * 100).toFixed(2));
+      localStorage.setItem(storageKey, JSON.stringify(anchos));
+    }
+
+    function restablecerAnchos() {
+      localStorage.removeItem(storageKey);
+      ths.forEach(th => { th.style.width = ''; });
+    }
+
+    ths.forEach((th, i) => {
+      if (i === ths.length - 1) return; // última columna: sin handle, no hay columna siguiente
+      const thNext = ths[i + 1];
+      th.classList.add('col-resizable');
+      const handle = document.createElement('span');
+      handle.className = 'col-resize-handle';
+      handle.setAttribute('aria-hidden', 'true');
+      th.appendChild(handle);
+
+      let tableWidthPx = 0, startX = 0, startWidthA = 0, startWidthB = 0, minPercent = 0;
+
+      handle.addEventListener('click', e => e.stopPropagation());
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        tableWidthPx = table.getBoundingClientRect().width;
+        if (!tableWidthPx) return;
+        startX = e.clientX;
+        startWidthA = th.getBoundingClientRect().width / tableWidthPx * 100;
+        startWidthB = thNext.getBoundingClientRect().width / tableWidthPx * 100;
+        minPercent = MIN_PX / tableWidthPx * 100;
+        document.body.classList.add('resizing-cols');
+
+        function onMove(ev) {
+          const deltaPercent = (ev.clientX - startX) / tableWidthPx * 100;
+          let newA = startWidthA + deltaPercent;
+          let newB = startWidthB - deltaPercent;
+          if (newA < minPercent) { newB -= (minPercent - newA); newA = minPercent; }
+          if (newB < minPercent) { newA -= (minPercent - newB); newB = minPercent; }
+          th.style.width = newA + '%';
+          thNext.style.width = newB + '%';
+        }
+        function onUp() {
+          document.body.classList.remove('resizing-cols');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          guardarAnchos();
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
+
+    aplicarAnchosGuardados();
+    return { restablecerAnchos };
+  }
+
   // ---------------- mayúscula automática en la primera letra (todos los campos de texto) ----------------
   // Un solo listener delegado en document, en vez de tocar cada <input>/<textarea> uno por uno --
   // así también cubre campos que se crean dinámicamente (filas de pedido, etc.) sin cablear nada
@@ -571,6 +652,12 @@
   const emptyInsumos = document.getElementById('emptyInsumos');
   const statsInsumos = document.getElementById('statsInsumos');
   const selUnidadInsumo = document.getElementById('insumoUnidad');
+
+  const resizableTablaInsumos = initResizableColumns(document.getElementById('tablaInsumos'), 'anchoColumnas_tablaInsumos');
+  document.getElementById('btnRestablecerAnchoInsumos').addEventListener('click', () => {
+    resizableTablaInsumos.restablecerAnchos();
+    showToast('Anchos de columna de Insumos restablecidos');
+  });
 
   Object.keys(UNITS).forEach(key => {
     const opt = document.createElement('option');
@@ -2607,6 +2694,12 @@
   const tbodyClientes = document.getElementById('tbodyClientes');
   const emptyClientes = document.getElementById('emptyClientes');
   const statsClientes = document.getElementById('statsClientes');
+
+  const resizableTablaClientes = initResizableColumns(document.getElementById('tablaClientes'), 'anchoColumnas_tablaClientes');
+  document.getElementById('btnRestablecerAnchoClientes').addEventListener('click', () => {
+    resizableTablaClientes.restablecerAnchos();
+    showToast('Anchos de columna de Clientes restablecidos');
+  });
 
   // resumen de compras de un cliente: cuántos pedidos, cuántos platos en total
   // y el monto acumulado de todos sus pedidos (usando el mismo cálculo que la pestaña Pedidos).
