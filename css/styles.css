@@ -289,6 +289,12 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover{background:var(--surface-alt)}
 .col-actions{text-align:right;width:1%;white-space:nowrap}
+/* .data-table th{text-align:left} (arriba) es mas especifico que .col-actions solo -- por eso
+   el titulo "Acciones" quedaba a la izquierda mientras los iconos (sin ninguna regla que
+   compita en el td) si salian a la derecha. Esta regla junta ambas clases para ganarle en
+   especificidad y alinear el titulo con el contenido en todas las tablas con esta columna
+   (Insumos, Pedidos, Clientes, Gastos, Capital, etc.), no solo en Insumos. */
+.data-table th.col-actions{text-align:right}
 
 /* handle de resize de columnas (Insumos/Clientes, ver initResizableColumns en app.js) --
    posicionado a caballo entre esta columna y la siguiente (mitad y mitad) para que el area de
