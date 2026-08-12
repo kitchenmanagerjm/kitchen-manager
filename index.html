@@ -186,6 +186,7 @@
       <button class="btn btn-ghost btn-lg" id="btnVentaMostrador">⚡ Venta de mostrador</button>
       <button class="btn btn-ghost empuja-derecha" id="btnExportarPedidosPDF">🖨 Exportar PDF</button>
       <button class="btn btn-ghost" id="btnPapeleraPedidos">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnRestablecerAnchoPedidos" title="Volver los anchos de columna de la tabla a los valores por defecto">↺ Restablecer anchos</button>
       <button class="btn btn-ghost" id="btnAyudaPedidos" title="Ayuda">❓ Ayuda</button>
     </div>
 
@@ -293,6 +294,7 @@
         <button class="btn btn-primary" id="btnNuevoGasto">+ Nuevo gasto</button>
         <button class="btn btn-ghost empuja-derecha" id="btnExportarGastosPDF">🖨 Exportar PDF</button>
         <button class="btn btn-ghost" id="btnPapeleraGastos">🗑 Papelera</button>
+        <button class="btn btn-ghost" id="btnRestablecerAnchoGastos" title="Volver los anchos de columna de la tabla a los valores por defecto">↺ Restablecer anchos</button>
         <button class="btn btn-ghost" id="btnAyudaFinanzasGastos" title="Ayuda">❓ Ayuda</button>
       </div>
       <div class="view-toolbar filtro-fecha-row">
@@ -324,7 +326,8 @@
     <div id="subview-capital" class="subview">
       <div class="view-toolbar">
         <button class="btn btn-primary" id="btnNuevoCapital">+ Nuevo movimiento</button>
-        <button class="btn btn-ghost empuja-derecha" id="btnPapeleraCapital">🗑 Papelera</button>
+        <button class="btn btn-ghost empuja-derecha" id="btnRestablecerAnchoCapital" title="Volver los anchos de columna de la tabla a los valores por defecto">↺ Restablecer anchos</button>
+        <button class="btn btn-ghost" id="btnPapeleraCapital">🗑 Papelera</button>
         <button class="btn btn-ghost" id="btnAyudaFinanzasCapital" title="Ayuda">❓ Ayuda</button>
       </div>
       <div class="stats-row" id="statsCapital"></div>
@@ -353,6 +356,7 @@
         <input type="date" id="rentabilidadFiltroHasta">
         <button class="btn btn-ghost btn-sm" id="btnLimpiarFiltroRentabilidad">✕ Limpiar filtro</button>
         <button class="btn btn-ghost empuja-derecha" id="btnExportarRentabilidadPDF">🖨 Exportar PDF</button>
+        <button class="btn btn-ghost" id="btnRestablecerAnchoRentabilidad" title="Volver los anchos de columna de la tabla a los valores por defecto">↺ Restablecer anchos</button>
         <button class="btn btn-ghost" id="btnAyudaFinanzasRentabilidad" title="Ayuda">❓ Ayuda</button>
       </div>
       <p class="field-note">Los costos se calculan con los precios ACTUALES de los insumos, no con los precios históricos que tenían en cada fecha.</p>
@@ -390,6 +394,7 @@
       <button class="btn btn-primary empuja-derecha" id="btnFinalizarCompra">✅ Finalizar compra</button>
       <button class="btn btn-ghost" id="btnExportarCarritoPDF">🖨 Exportar PDF</button>
       <button class="btn btn-ghost" id="btnPapeleraCarrito">🗑 Papelera</button>
+      <button class="btn btn-ghost" id="btnRestablecerAnchoCompras" title="Volver los anchos de columna de las tablas de esta vista a los valores por defecto">↺ Restablecer anchos</button>
       <button class="btn btn-ghost" id="btnAyudaCompras" title="Ayuda">❓ Ayuda</button>
     </div>
     <p class="field-note" id="carritoNotaEliminadas" hidden></p>

@@ -289,12 +289,21 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover{background:var(--surface-alt)}
 .col-actions{text-align:right;width:1%;white-space:nowrap}
-/* .data-table th{text-align:left} (arriba) es mas especifico que .col-actions solo -- por eso
-   el titulo "Acciones" quedaba a la izquierda mientras los iconos (sin ninguna regla que
-   compita en el td) si salian a la derecha. Esta regla junta ambas clases para ganarle en
-   especificidad y alinear el titulo con el contenido en todas las tablas con esta columna
-   (Insumos, Pedidos, Clientes, Gastos, Capital, etc.), no solo en Insumos. */
-.data-table th.col-actions{text-align:right}
+/* Insumos/Pedidos/Clientes/Gastos/Capital: el titulo "Acciones" se deja donde ya estaba
+   (alineado a la izquierda, por .data-table th{text-align:left} de arriba) y en vez de mover
+   el titulo a la derecha se mueven los iconos a la izquierda para que arranquen debajo de la
+   "A" -- .col-actions{text-align:right} (arriba) es la unica regla de alineacion que aplica al
+   <td> (el <th> no la hereda por la especificidad ya explicada), asi que alcanza con pisarla
+   en el <td> de estas 5 tablas puntuales. El resto de tablas con .col-actions (Rentabilidad no
+   tiene esta columna; Compras/modales la usan solo para un boton "Quitar"/icono suelto, sin
+   texto de titulo que alinear) se dejan tal cual, a la derecha. */
+#tablaInsumos td.col-actions,
+#tablaPedidos td.col-actions,
+#tablaClientes td.col-actions,
+#tablaGastos td.col-actions,
+#tablaCapital td.col-actions{
+  text-align:left;
+}
 
 /* handle de resize de columnas (Insumos/Clientes, ver initResizableColumns en app.js) --
    posicionado a caballo entre esta columna y la siguiente (mitad y mitad) para que el area de
@@ -346,6 +355,66 @@ body.resizing-cols *{cursor:col-resize !important}
 #tablaClientes th:nth-child(6){width:10.22%}
 #tablaClientes th:nth-child(7){width:11.58%}
 #tablaClientes th:nth-child(8){width:8.33%}
+
+/* Pedidos: 13 columnas, varias con cell-nowrap (Entrega/Jornada/Total) y Notas que en la
+   práctica puede ser un párrafo largo (ver datos reales en Supabase) -- su contenido real ya
+   hoy necesita mas ancho (~1589px medidos) del que entra en el panel (~1390px), así que en vez
+   de forzar el 100% (que apretaría/partiría Notas y Cliente) se deja con ancho fijo en PX que
+   puede superar el 100% del panel: .table-wrap ya tiene overflow:auto, así que aparece scroll
+   horizontal cuando hace falta, igual que ya pasa hoy con pedidos con mucho contenido. Por eso
+   initResizableColumns() se llama con { mode: 'pixel' } para esta tabla -- cada columna se
+   arrastra sola, sin robarle ancho a la de al lado (ver comentario de la función en app.js). */
+#tablaPedidos{table-layout:fixed;width:1591px}
+#tablaPedidos th:nth-child(1){width:59px}
+#tablaPedidos th:nth-child(2){width:130px}
+#tablaPedidos th:nth-child(3){width:88px}
+#tablaPedidos th:nth-child(4){width:238px}
+#tablaPedidos th:nth-child(5){width:99px}
+#tablaPedidos th:nth-child(6){width:151px}
+#tablaPedidos th:nth-child(7){width:92px}
+#tablaPedidos th:nth-child(8){width:118px}
+#tablaPedidos th:nth-child(9){width:127px}
+#tablaPedidos th:nth-child(10){width:143px}
+#tablaPedidos th:nth-child(11){width:137px}
+#tablaPedidos th:nth-child(12){width:105px}
+#tablaPedidos th:nth-child(13){width:104px}
+
+/* Gastos/Capital/Rentabilidad/Compras: a diferencia de Pedidos, su contenido real SI entra
+   comodo en el 100% del panel (medido igual que arriba, con datos reales de Supabase donde
+   hay: Concepto/Nota mas largos existentes, montos de 6 cifras, etc.) -- mismo esquema en % de
+   Insumos/Clientes, transferencia entre columnas vecinas al arrastrar. */
+#tablaGastos{table-layout:fixed;width:100%}
+#tablaGastos th:nth-child(1){width:17.81%}
+#tablaGastos th:nth-child(2){width:12.86%}
+#tablaGastos th:nth-child(3){width:32.90%}
+#tablaGastos th:nth-child(4){width:17.70%}
+#tablaGastos th:nth-child(5){width:12.48%}
+#tablaGastos th:nth-child(6){width:6.25%}
+
+#tablaCapital{table-layout:fixed;width:100%}
+#tablaCapital th:nth-child(1){width:20.10%}
+#tablaCapital th:nth-child(2){width:12.86%}
+#tablaCapital th:nth-child(3){width:46.71%}
+#tablaCapital th:nth-child(4){width:14.09%}
+#tablaCapital th:nth-child(5){width:6.24%}
+
+#tablaRentabilidad{table-layout:fixed;width:100%}
+#tablaRentabilidad th:nth-child(1){width:26.45%}
+#tablaRentabilidad th:nth-child(2){width:17.99%}
+#tablaRentabilidad th:nth-child(3){width:14.88%}
+#tablaRentabilidad th:nth-child(4){width:13.41%}
+#tablaRentabilidad th:nth-child(5){width:15.30%}
+#tablaRentabilidad th:nth-child(6){width:11.97%}
+
+#tablaCarritoItems{table-layout:fixed;width:100%}
+#tablaCarritoItems th:nth-child(1){width:57.07%}
+#tablaCarritoItems th:nth-child(2){width:37.73%}
+#tablaCarritoItems th:nth-child(3){width:5.20%}
+
+#tablaCarritoConsolidado{table-layout:fixed;width:100%}
+#tablaCarritoConsolidado th:nth-child(1){width:37.20%}
+#tablaCarritoConsolidado th:nth-child(2){width:40.88%}
+#tablaCarritoConsolidado th:nth-child(3){width:21.92%}
 .text-right{text-align:right}
 .text-center{text-align:center}
 .empty-state{padding:30px;text-align:center;color:var(--text-muted);font-size:13.5px}

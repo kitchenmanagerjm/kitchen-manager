@@ -197,50 +197,71 @@
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // ---------------- columnas de tabla redimensionables (Insumos/Clientes) ----------------
-  // Agrega un "handle" arrastrable en el borde derecho de cada <th> (menos el último, que no
-  // tiene una columna siguiente de la cual robarle/darle ancho) -- igual que Excel: arrastrar
-  // el borde entre dos columnas solo transfiere % entre esas dos, por eso el total de la fila
-  // se mantiene siempre en 100% del panel sin necesidad de redistribuir el resto ni de scroll
-  // horizontal. Los anchos base siguen viniendo de las reglas #tablaX th:nth-child(n) del CSS;
-  // esta función solo los pisa con un style.width inline cuando el usuario arrastra o cuando
-  // hay anchos guardados de una visita anterior (un style inline siempre gana contra una regla
-  // por id+nth-child). "Restablecer anchos" borra ese inline y el localStorage, así vuelve a
+  // ---------------- columnas de tabla redimensionables ----------------
+  // Agrega un "handle" arrastrable en el borde derecho de cada <th> -- igual que Excel. Dos
+  // modos, según si el contenido real de la tabla entra cómodo en el 100% del panel o no:
+  //
+  //  - modo 'percent' (default -- Insumos, Clientes, Gastos, Capital, Rentabilidad, Compras):
+  //    arrastrar el borde entre dos columnas transfiere % SOLO entre esas dos (una crece, la
+  //    otra se achica lo mismo), así la fila siempre suma 100% del panel sin redistribuir el
+  //    resto ni necesitar scroll. La última columna no tiene handle (no hay columna siguiente
+  //    de la cual robarle/darle ancho).
+  //  - modo 'pixel' (Pedidos: 13 columnas, varias con cell-nowrap y notas largas -- su
+  //    contenido real ya no entra en el ancho del panel hoy tampoco): cada columna se
+  //    redimensiona SOLA, en px, sin afectar a las demás; el ancho total de la tabla crece o
+  //    achica con ella, y el scroll horizontal que ya tiene .table-wrap (overflow:auto) se
+  //    encarga del resto. Todas las columnas, incluida la última, tienen handle.
+  //
+  // Los anchos base siguen viniendo de las reglas #tablaX th:nth-child(n) del CSS; esta
+  // función solo los pisa con un style.width inline cuando el usuario arrastra o cuando hay
+  // anchos guardados de una visita anterior (un style inline siempre gana contra una regla por
+  // id+nth-child). "Restablecer anchos" borra ese inline y el localStorage, así vuelve a
   // mandar el CSS de siempre.
-  function initResizableColumns(table, storageKey) {
+  function initResizableColumns(table, storageKey, opts) {
     if (!table) return { restablecerAnchos() {} };
+    const modo = (opts && opts.mode) || 'percent';
     const MIN_PX = 36;
     const ths = Array.from(table.querySelectorAll('thead th'));
+
+    function sumaPx() {
+      return ths.reduce((s, th) => s + th.getBoundingClientRect().width, 0);
+    }
 
     function aplicarAnchosGuardados() {
       let anchos;
       try { anchos = JSON.parse(localStorage.getItem(storageKey)); } catch (e) { anchos = null; }
       if (!Array.isArray(anchos) || anchos.length !== ths.length) return;
-      ths.forEach((th, i) => { th.style.width = anchos[i] + '%'; });
+      const unidad = modo === 'pixel' ? 'px' : '%';
+      ths.forEach((th, i) => { th.style.width = anchos[i] + unidad; });
+      if (modo === 'pixel') table.style.width = anchos.reduce((s, a) => s + a, 0) + 'px';
     }
 
     function guardarAnchos() {
-      const totalPx = ths.reduce((s, th) => s + th.getBoundingClientRect().width, 0);
+      const totalPx = sumaPx();
       if (!totalPx) return;
-      const anchos = ths.map(th => +(th.getBoundingClientRect().width / totalPx * 100).toFixed(2));
+      const anchos = modo === 'pixel'
+        ? ths.map(th => Math.round(th.getBoundingClientRect().width))
+        : ths.map(th => +(th.getBoundingClientRect().width / totalPx * 100).toFixed(2));
       localStorage.setItem(storageKey, JSON.stringify(anchos));
     }
 
     function restablecerAnchos() {
       localStorage.removeItem(storageKey);
       ths.forEach(th => { th.style.width = ''; });
+      if (modo === 'pixel') table.style.width = '';
     }
 
     ths.forEach((th, i) => {
-      if (i === ths.length - 1) return; // última columna: sin handle, no hay columna siguiente
-      const thNext = ths[i + 1];
+      const esUltima = i === ths.length - 1;
+      if (esUltima && modo === 'percent') return; // sin columna siguiente de la cual robar/dar ancho
+      const thNext = modo === 'percent' ? ths[i + 1] : null;
       th.classList.add('col-resizable');
       const handle = document.createElement('span');
       handle.className = 'col-resize-handle';
       handle.setAttribute('aria-hidden', 'true');
       th.appendChild(handle);
 
-      let tableWidthPx = 0, startX = 0, startWidthA = 0, startWidthB = 0, minPercent = 0;
+      let tableWidthPx = 0, startX = 0, startWidthA = 0, startWidthB = 0, minPercent = 0, startTableWidthPx = 0;
 
       handle.addEventListener('click', e => e.stopPropagation());
       handle.addEventListener('mousedown', (e) => {
@@ -249,13 +270,24 @@
         tableWidthPx = table.getBoundingClientRect().width;
         if (!tableWidthPx) return;
         startX = e.clientX;
-        startWidthA = th.getBoundingClientRect().width / tableWidthPx * 100;
-        startWidthB = thNext.getBoundingClientRect().width / tableWidthPx * 100;
-        minPercent = MIN_PX / tableWidthPx * 100;
+        startWidthA = th.getBoundingClientRect().width / (modo === 'pixel' ? 1 : tableWidthPx / 100);
+        if (modo === 'percent') {
+          startWidthB = thNext.getBoundingClientRect().width / tableWidthPx * 100;
+          minPercent = MIN_PX / tableWidthPx * 100;
+        } else {
+          startTableWidthPx = sumaPx();
+        }
         document.body.classList.add('resizing-cols');
 
         function onMove(ev) {
-          const deltaPercent = (ev.clientX - startX) / tableWidthPx * 100;
+          const deltaPx = ev.clientX - startX;
+          if (modo === 'pixel') {
+            const newWidthPx = Math.max(MIN_PX, startWidthA + deltaPx);
+            th.style.width = newWidthPx + 'px';
+            table.style.width = (startTableWidthPx + (newWidthPx - startWidthA)) + 'px';
+            return;
+          }
+          const deltaPercent = deltaPx / tableWidthPx * 100;
           let newA = startWidthA + deltaPercent;
           let newB = startWidthB - deltaPercent;
           if (newA < minPercent) { newB -= (minPercent - newA); newA = minPercent; }
@@ -267,6 +299,10 @@
           document.body.classList.remove('resizing-cols');
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
+          // un arrastre largo puede alcanzar a seleccionar texto de las celdas que el mouse
+          // atraviesa en el camino (el user-select:none de body.resizing-cols evita que se vea
+          // mientras se arrastra, pero por si alguna selección quedó armada, se limpia al soltar).
+          if (window.getSelection) window.getSelection().removeAllRanges();
           guardarAnchos();
         }
         document.addEventListener('mousemove', onMove);
@@ -3484,6 +3520,12 @@
   const emptyPedidos = document.getElementById('emptyPedidos');
   const statsPedidos = document.getElementById('statsPedidos');
 
+  const resizableTablaPedidos = initResizableColumns(document.getElementById('tablaPedidos'), 'anchoColumnas_tablaPedidos', { mode: 'pixel' });
+  document.getElementById('btnRestablecerAnchoPedidos').addEventListener('click', () => {
+    resizableTablaPedidos.restablecerAnchos();
+    showToast('Anchos de columna de Pedidos restablecidos');
+  });
+
   // tarjetas-lista (Platos pedidos/entregados, vendido-planeado por Jornada) pueden llegar a
   // tener muchas filas y ocupar mucho alto -- se les agrega una flecha para minimizarlas. El
   // estado colapsado/expandido se guarda en memoria por "key" (no en localStorage, se resetea
@@ -4524,6 +4566,22 @@
   let capitalMovimientos = loadCapital();
   let donaciones = loadDonaciones();
   let categoriasGastos = loadList(LS_CAT_GASTOS, CATEGORIAS_GASTOS_DEFAULT).sort((a, b) => a.localeCompare(b));
+
+  const resizableTablaGastos = initResizableColumns(document.getElementById('tablaGastos'), 'anchoColumnas_tablaGastos');
+  document.getElementById('btnRestablecerAnchoGastos').addEventListener('click', () => {
+    resizableTablaGastos.restablecerAnchos();
+    showToast('Anchos de columna de Gastos restablecidos');
+  });
+  const resizableTablaCapital = initResizableColumns(document.getElementById('tablaCapital'), 'anchoColumnas_tablaCapital');
+  document.getElementById('btnRestablecerAnchoCapital').addEventListener('click', () => {
+    resizableTablaCapital.restablecerAnchos();
+    showToast('Anchos de columna de Capital restablecidos');
+  });
+  const resizableTablaRentabilidad = initResizableColumns(document.getElementById('tablaRentabilidad'), 'anchoColumnas_tablaRentabilidad');
+  document.getElementById('btnRestablecerAnchoRentabilidad').addEventListener('click', () => {
+    resizableTablaRentabilidad.restablecerAnchos();
+    showToast('Anchos de columna de Rentabilidad restablecidos');
+  });
   // mismo mecanismo que recetasEliminadasPorId/clientesEliminadosPorId: nombre de jornadas
   // en la Papelera de Supabase, para que Gastos (y en el futuro Pedidos) muestren el nombre
   // real + "Eliminado" en vez del genérico "(jornada eliminada)".
@@ -7218,6 +7276,14 @@
   //  "Exportar PDF" y "Finalizar compra" no tengan que volver a pedirlo.
   // =========================================================
   let carritoActivoActual = [];
+
+  const resizableTablaCarritoItems = initResizableColumns(document.getElementById('tablaCarritoItems'), 'anchoColumnas_tablaCarritoItems');
+  const resizableTablaCarritoConsolidado = initResizableColumns(document.getElementById('tablaCarritoConsolidado'), 'anchoColumnas_tablaCarritoConsolidado');
+  document.getElementById('btnRestablecerAnchoCompras').addEventListener('click', () => {
+    resizableTablaCarritoItems.restablecerAnchos();
+    resizableTablaCarritoConsolidado.restablecerAnchos();
+    showToast('Anchos de columna de Compras restablecidos');
+  });
 
   function nombrePlatoCarrito(fila) {
     const receta = recetas.find(r => r.id === fila.receta_id);
