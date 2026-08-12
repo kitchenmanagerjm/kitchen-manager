@@ -293,18 +293,19 @@ main{padding:20px 24px 60px;max-width:2400px;margin:0 auto}
 /* Insumos/Clientes: con table-layout:auto (por defecto) + width:100%, el navegador reparte
    el ancho sobrante entre TODAS las columnas -- con columnas de valores cortos (categoría,
    unidad, precio, teléfono, etc.) eso se veía como espacios enormes entre columnas. Se le da
-   un ancho fijo a CADA columna (incluida Nombre) y se quita el width:100% -- así la tabla
-   queda exactamente del ancho que necesita su contenido, sin que ninguna columna "estire" de
-   más; si el contenedor es más ancho que la tabla, el sobrante queda como fondo vacío después
-   de la tabla, no como huecos entre columnas. */
-#tablaInsumos{table-layout:fixed;width:980px}
-#tablaInsumos th:nth-child(1){width:260px}
-#tablaInsumos th:nth-child(2){width:170px}
-#tablaInsumos th:nth-child(3){width:130px}
-#tablaInsumos th:nth-child(4){width:90px}
-#tablaInsumos th:nth-child(5){width:80px}
-#tablaInsumos th:nth-child(6){width:150px}
-#tablaInsumos th:nth-child(7){width:100px}
+   un ancho fijo a CADA columna (incluida Nombre), pero en % (no px) y con la tabla en
+   width:100% -- así se mantiene la misma proporción entre columnas que antes (siguen sin
+   "estirarse" de forma dispareja) pero la tabla ocupa todo el ancho del panel, igual que
+   Recetas/Pedidos, en vez de dejar un espacio vacío fijo a la derecha cuando el panel es más
+   ancho que los 980px que tenía la tabla antes. */
+#tablaInsumos{table-layout:fixed;width:100%}
+#tablaInsumos th:nth-child(1){width:26.53%}
+#tablaInsumos th:nth-child(2){width:17.35%}
+#tablaInsumos th:nth-child(3){width:13.27%}
+#tablaInsumos th:nth-child(4){width:9.18%}
+#tablaInsumos th:nth-child(5){width:8.16%}
+#tablaInsumos th:nth-child(6){width:15.31%}
+#tablaInsumos th:nth-child(7){width:10.20%}
 
 #tablaClientes{table-layout:fixed;width:1200px}
 #tablaClientes th:nth-child(1){width:180px}
